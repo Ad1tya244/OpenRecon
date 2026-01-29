@@ -2,13 +2,37 @@ import React, { useEffect, useState } from 'react'
 import ReportCard from './ReportCard'
 
 import AttackSurfaceGraph from './AttackSurfaceGraph'
+import IntelligenceReport from './IntelligenceReport'
 
 const Dashboard = ({ domain }) => {
-    const handleDownloadReport = () => {
-        window.open(`http://localhost:8000/scan/report?domain=${domain}`, '_blank');
+    const handleDownloadReport = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/scan/report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ...data, target: domain })
+            });
+
+            if (!response.ok) throw new Error("Report generation failed");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `OpenRecon_Report_${domain}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) {
+            console.error("Download failed:", e);
+            alert("Failed to generate report. Please try again.");
+        }
     }
 
     const [viewGraph, setViewGraph] = useState(false)
+    const [viewIntel, setViewIntel] = useState(false)
     const [data, setData] = useState({
         // ... (existing)
         dns: null,
@@ -23,7 +47,8 @@ const Dashboard = ({ domain }) => {
         network_footprint: null,
         code_leaks: null,
         public_files: null,
-        historical: null
+        historical: null,
+        intelligence: null
     })
 
     const [loading, setLoading] = useState({
@@ -39,7 +64,8 @@ const Dashboard = ({ domain }) => {
         network_footprint: true,
         code_leaks: true,
         public_files: true,
-        historical: true
+        historical: true,
+        intelligence: true
     })
 
     useEffect(() => {
@@ -63,12 +89,12 @@ const Dashboard = ({ domain }) => {
         setLoading({
             dns: true, whois: true, ssl: true, headers: true, subdomains: true,
             tech: true, ports: true, directory_exposure: true, ip_intelligence: true,
-            network_footprint: true, code_leaks: true, public_files: true, historical: true
+            network_footprint: true, code_leaks: true, public_files: true, historical: true, intelligence: true
         })
         setData({
             dns: null, whois: null, ssl: null, headers: null, subdomains: null,
             tech: null, ports: null, directory_exposure: null, ip_intelligence: null,
-            network_footprint: null, code_leaks: null, public_files: null, historical: null
+            network_footprint: null, code_leaks: null, public_files: null, historical: null, intelligence: null
         })
 
         // Parallel fetch
@@ -85,11 +111,16 @@ const Dashboard = ({ domain }) => {
         fetchData('code-leaks', 'code_leaks')
         fetchData('public-files', 'public_files')
         fetchData('historical', 'historical')
+        fetchData('intelligence', 'intelligence')
 
     }, [domain])
 
     if (viewGraph) {
         return <AttackSurfaceGraph domain={domain} onBack={() => setViewGraph(false)} />
+    }
+
+    if (viewIntel) {
+        return <IntelligenceReport domain={domain} initialData={data.intelligence} onBack={() => setViewIntel(false)} />
     }
 
     return (
@@ -101,36 +132,20 @@ const Dashboard = ({ domain }) => {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
+                        onClick={() => setViewIntel(true)}
+                        className="btn btn-emerald"
+                    >
+                        View Intelligence Report
+                    </button>
+                    <button
                         onClick={() => setViewGraph(true)}
-                        className="button"
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: '#6366f1', // Indigo
-                            border: 'none', // Remove border for colored button
-                            color: 'white',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            boxShadow: '0 4px 6px rgba(99, 102, 241, 0.3)', // Colored shadow
-                            transition: 'all 0.2s ease'
-                        }}
+                        className="btn btn-indigo"
                     >
                         View Attack Surface Graph
                     </button>
                     <button
                         onClick={handleDownloadReport}
-                        className="button"
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'var(--primary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                            transition: 'all 0.2s ease'
-                        }}
+                        className="btn btn-primary"
                     >
                         Download PDF Report
                     </button>

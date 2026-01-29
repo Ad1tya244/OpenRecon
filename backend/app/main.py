@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import FastAPI, Request
-from app.modules import dns_recon, whois_recon, ssl_recon, headers_recon, subdomain_recon, tech_fingerprint, security_headers_recon, public_files_recon, directory_exposure_recon, code_leak_recon, historical_recon, attack_surface_mapper, report_generator, port_recon, ip_hosting_asn_intelligence, network_footprint_mapper, unified_attack_surface_graph
+from app.modules import dns_recon, whois_recon, ssl_recon, headers_recon, subdomain_recon, tech_fingerprint, security_headers_recon, public_files_recon, directory_exposure_recon, code_leak_recon, historical_recon, attack_surface_mapper, report_generator, port_recon, ip_hosting_asn_intelligence, network_footprint_mapper, unified_attack_surface_graph, attack_surface_intelligence
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -57,83 +57,95 @@ def get_validated_target(target: str) -> str:
         raise HTTPException(status_code=400, detail=result.error_message)
     return result.normalized_input
 
+from app.modules.confidence_evidence_engine import ConfidenceEngine
+
+def enrich_result(module_name: str, result: any) -> dict:
+    """Injects confidence scores into module results."""
+    # Handle list outputs (e.g. subdomains) by wrapping
+    if isinstance(result, list):
+        result = {module_name: result}
+        
+    if isinstance(result, dict) and "error" not in result:
+        result["confidence"] = ConfidenceEngine.calculate_module_confidence(module_name, result)
+    return result
+
 @app.get("/scan/dns")
 @limiter.limit("5/minute")
 async def scan_dns(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return dns_recon.get_dns_records(domain)
+    return enrich_result("dns", dns_recon.get_dns_records(domain))
 
 @app.get("/scan/whois")
 @limiter.limit("5/minute")
 async def scan_whois(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return whois_recon.get_whois_info(domain)
+    return enrich_result("whois", whois_recon.get_whois_info(domain))
 
 @app.get("/scan/ssl")
 @limiter.limit("5/minute")
 async def scan_ssl(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return ssl_recon.analyze_ssl(domain)
+    return enrich_result("ssl", ssl_recon.analyze_ssl(domain))
 
 @app.get("/scan/headers")
 @limiter.limit("5/minute")
 async def scan_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await headers_recon.analyze_headers(domain)
+    return enrich_result("headers", await headers_recon.analyze_headers(domain))
 
 @app.get("/scan/subdomains")
 @limiter.limit("5/minute")
 async def scan_subdomains(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await subdomain_recon.enumerate_subdomains(domain)
+    return enrich_result("subdomains", await subdomain_recon.enumerate_subdomains(domain))
 
 @app.get("/scan/tech")
 @limiter.limit("5/minute")
 async def scan_tech(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await tech_fingerprint.get_tech_fingerprint(domain)
+    return enrich_result("tech", await tech_fingerprint.get_tech_fingerprint(domain))
 
 @app.get("/scan/security-headers")
 @limiter.limit("5/minute")
 async def scan_security_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await security_headers_recon.analyze_security_headers(domain)
+    return enrich_result("security_headers", await security_headers_recon.analyze_security_headers(domain))
 
 @app.get("/scan/public-files")
 @limiter.limit("5/minute")
 async def scan_public_files(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await public_files_recon.check_public_files(domain)
+    return enrich_result("public_files", await public_files_recon.check_public_files(domain))
 
 @app.get("/scan/directory-exposure")
 @limiter.limit("5/minute")
 async def scan_directory_exposure(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await directory_exposure_recon.check_directory_exposure(domain)
+    return enrich_result("directory_exposure", await directory_exposure_recon.check_directory_exposure(domain))
 
 @app.get("/scan/code-leaks")
 @limiter.limit("5/minute")
 async def scan_code_leaks(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await code_leak_recon.check_code_leaks(domain)
+    return enrich_result("code_leaks", await code_leak_recon.check_code_leaks(domain))
 
 @app.get("/scan/historical")
 @limiter.limit("5/minute")
 async def scan_historical(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await historical_recon.check_historical_data(domain)
+    return enrich_result("historical", await historical_recon.check_historical_data(domain))
 
 @app.get("/scan/ip-intelligence")
 @limiter.limit("5/minute")
 async def scan_ip_intelligence(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await ip_hosting_asn_intelligence.get_domain_intelligence(domain)
+    return enrich_result("ip_intelligence", await ip_hosting_asn_intelligence.get_domain_intelligence(domain))
 
 @app.get("/scan/network-footprint")
 @limiter.limit("5/minute")
 async def scan_network_footprint(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return await network_footprint_mapper.map_network_footprint(domain)
+    return enrich_result("network_footprint", await network_footprint_mapper.map_network_footprint(domain))
 
 @app.get("/scan/graph")
 @limiter.limit("3/minute")
@@ -220,6 +232,13 @@ async def _orchestrate_full_scan(domain: str):
     except Exception as e:
         full_data["attack_surface"] = {"error": f"Mapping failed: {str(e)}", "risk_assessment": {"score": 0, "grade": "F"}}
 
+    # Inject Confidence Scores for each module
+    from app.modules.confidence_evidence_engine import ConfidenceEngine
+    for key, val in full_data.items():
+        if key in ["target", "attack_surface", "intelligence"]: continue
+        if isinstance(val, dict) and "error" not in val:
+             val["confidence"] = ConfidenceEngine.calculate_module_confidence(key, val)
+
     return full_data
 
 @app.get("/scan/full")
@@ -239,30 +258,53 @@ async def scan_ports(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await port_recon.scan_ports(domain)
 
+@app.get("/scan/intelligence")
+@limiter.limit("10/minute")
+async def scan_intelligence(request: Request, domain: str):
+    domain = get_validated_target(domain)
+    full_data = await _orchestrate_full_scan(domain)
+    return attack_surface_intelligence.generate_intelligence(full_data)
+
+
+
 from fastapi.responses import FileResponse
 import os
 import tempfile
 
-@app.get("/scan/report")
-@limiter.limit("2/minute")
-async def scan_report(request: Request, domain: str):
-    """
-    Generates and returns a PDF report.
-    Triggers a full scan implicitly to ensure fresh data.
-    """
-    domain = get_validated_target(domain)
+@app.post("/scan/report")
+@limiter.limit("5/minute")
+async def generate_consolidated_report(request: Request, data: dict):
+    target = data.get("target", "Target")
     
-    full_data = await _orchestrate_full_scan(domain)
-    
-    # Generate Report
+    # 1. Re-run Attack Surface Mapper (cheap, deterministic) to ensure we have the risk graph signals
+    try:
+        data["attack_surface"] = attack_surface_mapper.map_attack_surface(data)
+    except Exception as e:
+        data["attack_surface"] = {"error": str(e)}
+
+    # 2. Re-run Intelligence Correlator (cheap, deterministic)
+    # Even if frontend sent it, good to double check or just use it. 
+    # Let's generate it freshly from the data provided to be safe/consistent.
+    data["intelligence"] = attack_surface_intelligence.generate_intelligence(data)
+
+    # 3. Structure for Report Generator
+    report_input = {
+        "target": target,
+        "attack_surface": data.get("attack_surface"),
+        "full_results": data,
+        "intelligence": data.get("intelligence")
+    }
+
     temp_dir = tempfile.gettempdir()
-    filename = f"OpenRecon_{domain}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    # Sanitize filename
+    safe_target = "".join([c for c in target if c.isalnum() or c in ['.','-']])
+    filename = f"OpenRecon_Report_{safe_target}_{datetime.now().strftime('%Y%m%d')}.pdf"
     output_path = os.path.join(temp_dir, filename)
     
-    result_path = report_generator.generate_report(full_data, output_path)
+    result_path = report_generator.generate_report(report_input, output_path)
     
     if "Error" in result_path:
-         return {"error": result_path}
+         return JSONResponse(status_code=500, content={"error": result_path})
          
     return FileResponse(result_path, filename=filename, media_type='application/pdf')
 

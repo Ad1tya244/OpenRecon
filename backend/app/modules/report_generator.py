@@ -125,6 +125,52 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     pdf.add_key_value("Total Subdomains", summary.get("total_subdomains", 0))
     pdf.ln(5)
     
+    # Intelligence Findings (Consolidated)
+    findings = scan_data.get("intelligence", [])
+    if findings:
+        pdf.chapter_title(f"Strategic Intelligence ({len(findings)} Findings)")
+        for finding in findings:
+            title = finding.get("title", "Unknown Finding")
+            severity = finding.get("severity", "Unknown")
+            
+            pdf.set_font('helvetica', 'B', 11)
+            if severity == "High": pdf.set_text_color(220, 38, 38)
+            elif severity == "Medium": pdf.set_text_color(234, 88, 12)
+            else: pdf.set_text_color(0, 100, 200)
+            
+            pdf.cell(0, 7, f"{title} [{severity}]", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(0, 0, 0)
+            
+            desc = finding.get("description", "")
+            pdf.set_font('helvetica', '', 10)
+            pdf.multi_cell(0, 5, desc)
+            pdf.ln(1)
+            
+            signals = finding.get("signals", [])
+            signals = finding.get("signals", [])
+            if signals:
+                pdf.set_font('helvetica', 'I', 9)
+                pdf.cell(0, 5, "Contributing Signals:", new_x="LMARGIN", new_y="NEXT")
+                pdf.set_font('helvetica', '', 9)
+                for s in signals:
+                    # Determine safe width
+                    bullet_width = 5
+                    # Move to start of line (margin) to ensure we are aligned
+                    pdf.set_x(pdf.l_margin + 2)
+                    pdf.cell(bullet_width, 5, "-")
+                    
+                    # Calculate remaining width for text
+                    # current X is now after the bullet? No, cell moves cursor if new_x is not set? 
+                    # Default: new_x="RIGHT" in FPDF2? No, default is "RIGHT".
+                    
+                    # Actually FPDF2 default is tricky. Let's be explicit
+                    # Reset X for text
+                    pdf.set_x(pdf.l_margin + 2 + bullet_width)
+                    remaining_width = pdf.w - pdf.r_margin - pdf.get_x()
+                    
+                    pdf.multi_cell(remaining_width, 5, str(s))
+            pdf.ln(4)
+    
     # Detailed Findings - by Module
     full_results = scan_data.get("full_results", {})
     
@@ -214,3 +260,5 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
         return output_path
     except Exception as e:
         return f"Error generating PDF: {str(e)}"
+
+

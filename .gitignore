@@ -44,3 +44,24 @@ report.pdf
 # Temporary
 temp/
 tmp/
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# System
+Thumbs.db
+.Trashes
+
+# Frontend
+.eslintcache
+
+# Merged from frontend/.gitignore
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+frontend/logs

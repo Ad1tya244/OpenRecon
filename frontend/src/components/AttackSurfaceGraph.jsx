@@ -208,18 +208,8 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '1.5rem' }}>Attack Surface Graph</h3>
-                <button onClick={onBack} className="button" style={{
-                    padding: '0.5rem 1rem',
-                    background: '#475569', // Slate
-                    border: 'none',
-                    color: 'white',
-                    borderRadius: '10px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                    transition: 'all 0.2s ease'
-                }}>
-                    Back to Report
+                <button onClick={onBack} className="btn btn-outline">
+                    &larr; Back to Report
                 </button>
             </div>
 

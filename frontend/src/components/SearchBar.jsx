@@ -47,7 +47,7 @@ const SearchBar = ({ onSearch, loading }) => {
                 </div>
                 <button
                     type="submit"
-                    className="btn-primary"
+                    className="btn btn-primary"
                     style={{ width: '100%', opacity: loading ? 0.7 : 1 }}
                     disabled={loading}
                 >
