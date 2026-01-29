@@ -2,7 +2,6 @@
 
 **OpenRecon** is a powerful, passive OSINT (Open Source Intelligence) reconnaissance tool and Attack Surface Management (ASM) dashboard. It allows security researchers and administrators to gain visibility into the external attack surface of a target domain without sending aggressive payloads.
 
-![OpenRecon Dashboard](https://via.placeholder.com/800x400?text=OpenRecon+Dashboard+Preview)
 
 ## 🚀 Features
 
@@ -97,5 +96,4 @@ By using this tool, you agree to:
 2.  Not use this tool for malicious purposes or unauthorized entry.
 3.  The developers are not liable for any misuse or legal consequences resulting from the use of this tool.
 
----
-*Created by the OpenRecon Team*
+
