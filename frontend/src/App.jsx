@@ -45,7 +45,7 @@ function App() {
         )}
 
         {target && (
-          <Dashboard domain={target} />
+          <Dashboard domain={target} onReset={() => setTarget(null)} />
         )}
       </main>
 

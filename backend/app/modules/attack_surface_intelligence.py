@@ -1,5 +1,4 @@
 from typing import Dict, Any, List
-from app.modules.confidence_evidence_engine import ConfidenceEngine
 
 def generate_intelligence(scan_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -35,7 +34,7 @@ def generate_intelligence(scan_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     if leak_finding:
         findings.append(leak_finding)
         
-    return ConfidenceEngine.enrich_findings(findings)
+    return findings
 
 def _detect_admin_exposure(data: Dict[str, Any]) -> Dict[str, Any]:
     """

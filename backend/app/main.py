@@ -57,95 +57,85 @@ def get_validated_target(target: str) -> str:
         raise HTTPException(status_code=400, detail=result.error_message)
     return result.normalized_input
 
-from app.modules.confidence_evidence_engine import ConfidenceEngine
 
-def enrich_result(module_name: str, result: any) -> dict:
-    """Injects confidence scores into module results."""
-    # Handle list outputs (e.g. subdomains) by wrapping
-    if isinstance(result, list):
-        result = {module_name: result}
-        
-    if isinstance(result, dict) and "error" not in result:
-        result["confidence"] = ConfidenceEngine.calculate_module_confidence(module_name, result)
-    return result
 
 @app.get("/scan/dns")
 @limiter.limit("5/minute")
 async def scan_dns(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("dns", dns_recon.get_dns_records(domain))
+    return dns_recon.get_dns_records(domain)
 
 @app.get("/scan/whois")
 @limiter.limit("5/minute")
 async def scan_whois(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("whois", whois_recon.get_whois_info(domain))
+    return whois_recon.get_whois_info(domain)
 
 @app.get("/scan/ssl")
 @limiter.limit("5/minute")
 async def scan_ssl(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("ssl", ssl_recon.analyze_ssl(domain))
+    return ssl_recon.analyze_ssl(domain)
 
 @app.get("/scan/headers")
 @limiter.limit("5/minute")
 async def scan_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("headers", await headers_recon.analyze_headers(domain))
+    return await headers_recon.analyze_headers(domain)
 
 @app.get("/scan/subdomains")
 @limiter.limit("5/minute")
 async def scan_subdomains(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("subdomains", await subdomain_recon.enumerate_subdomains(domain))
+    return await subdomain_recon.enumerate_subdomains(domain)
 
 @app.get("/scan/tech")
 @limiter.limit("5/minute")
 async def scan_tech(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("tech", await tech_fingerprint.get_tech_fingerprint(domain))
+    return await tech_fingerprint.get_tech_fingerprint(domain)
 
 @app.get("/scan/security-headers")
 @limiter.limit("5/minute")
 async def scan_security_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("security_headers", await security_headers_recon.analyze_security_headers(domain))
+    return await security_headers_recon.analyze_security_headers(domain)
 
 @app.get("/scan/public-files")
 @limiter.limit("5/minute")
 async def scan_public_files(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("public_files", await public_files_recon.check_public_files(domain))
+    return await public_files_recon.check_public_files(domain)
 
 @app.get("/scan/directory-exposure")
 @limiter.limit("5/minute")
 async def scan_directory_exposure(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("directory_exposure", await directory_exposure_recon.check_directory_exposure(domain))
+    return await directory_exposure_recon.check_directory_exposure(domain)
 
 @app.get("/scan/code-leaks")
 @limiter.limit("5/minute")
 async def scan_code_leaks(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("code_leaks", await code_leak_recon.check_code_leaks(domain))
+    return await code_leak_recon.check_code_leaks(domain)
 
 @app.get("/scan/historical")
 @limiter.limit("5/minute")
 async def scan_historical(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("historical", await historical_recon.check_historical_data(domain))
+    return await historical_recon.check_historical_data(domain)
 
 @app.get("/scan/ip-intelligence")
 @limiter.limit("5/minute")
 async def scan_ip_intelligence(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("ip_intelligence", await ip_hosting_asn_intelligence.get_domain_intelligence(domain))
+    return await ip_hosting_asn_intelligence.get_domain_intelligence(domain)
 
 @app.get("/scan/network-footprint")
 @limiter.limit("5/minute")
 async def scan_network_footprint(request: Request, domain: str):
     domain = get_validated_target(domain)
-    return enrich_result("network_footprint", await network_footprint_mapper.map_network_footprint(domain))
+    return await network_footprint_mapper.map_network_footprint(domain)
 
 @app.get("/scan/graph")
 @limiter.limit("3/minute")
@@ -232,12 +222,7 @@ async def _orchestrate_full_scan(domain: str):
     except Exception as e:
         full_data["attack_surface"] = {"error": f"Mapping failed: {str(e)}", "risk_assessment": {"score": 0, "grade": "F"}}
 
-    # Inject Confidence Scores for each module
-    from app.modules.confidence_evidence_engine import ConfidenceEngine
-    for key, val in full_data.items():
-        if key in ["target", "attack_surface", "intelligence"]: continue
-        if isinstance(val, dict) and "error" not in val:
-             val["confidence"] = ConfidenceEngine.calculate_module_confidence(key, val)
+
 
     return full_data
 

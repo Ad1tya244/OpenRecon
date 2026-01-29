@@ -108,10 +108,7 @@ class ConfidenceEngine:
         scores = {}
         
         # 1. Active/Direct modules (High Confidence)
-        if module_name in ["ports", "ssl", "headers", "code_leaks", "network_footprint"]:
-            # These are direct observations or verifiable crypto/API data.
-            # We can assign High to all fields or specific ones.
-            # For simplicity, we assume the entire module's findings are High confidence unless header-based.
+        if module_name in ["ports", "ssl", "headers", "code_leaks", "network_footprint", "public_files", "directory_exposure", "security_headers", "ip_intelligence"]:
             return {"_global": "High"} 
 
         # 2. DNS (High for existence, Medium for specific analysis)
@@ -121,6 +118,7 @@ class ConfidenceEngine:
                 scores[key] = "High" # Resolution confirmed
             if "email_security" in data:
                  scores["email_security"] = "Medium" # Logic-based
+            scores["_global"] = "High"
 
         # 3. Whois (Medium - often stale or redacted)
         elif module_name == "whois":
@@ -132,10 +130,16 @@ class ConfidenceEngine:
             scores["frameworks"] = "Low" # Often heuristic (cookies, generic headers)
             scores["proxies"] = "Medium"
             scores["os_hint"] = "Low"
+            scores["_global"] = "Medium"
 
         # 5. Subdomains (Medium - Passive sources can be stale)
         elif module_name == "subdomains":
             scores["subdomains"] = "Medium"
+            scores["_global"] = "Medium"
+            
+        # 6. Historical (Medium - by nature stale)
+        elif module_name == "historical":
+             scores["_global"] = "Medium"
 
         # Fallback
         if not scores:

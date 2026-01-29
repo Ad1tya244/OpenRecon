@@ -4,7 +4,7 @@ import ReportCard from './ReportCard'
 import AttackSurfaceGraph from './AttackSurfaceGraph'
 import IntelligenceReport from './IntelligenceReport'
 
-const Dashboard = ({ domain }) => {
+const Dashboard = ({ domain, onReset }) => {
     const handleDownloadReport = async () => {
         try {
             const response = await fetch('http://localhost:8000/scan/report', {
@@ -127,10 +127,10 @@ const Dashboard = ({ domain }) => {
         <div className="dashboard-grid">
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem' }}>Target: <span className="text-gradient">{domain}</span></h2>
-                    <p style={{ color: 'var(--text-dim)' }}>Intelligence Report</p>
+                    <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Target: <span className="text-gradient">{domain}</span></h2>
+                    <p style={{ color: 'var(--text-dim)', marginTop: '0.25rem' }}>Intelligence Report</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
                     <button
                         onClick={() => setViewIntel(true)}
                         className="btn btn-emerald"
@@ -143,17 +143,25 @@ const Dashboard = ({ domain }) => {
                     >
                         View Attack Surface Graph
                     </button>
-                    <button
-                        onClick={handleDownloadReport}
-                        className="btn btn-primary"
-                    >
-                        Download PDF Report
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button
+                            onClick={onReset}
+                            className="btn"
+                            style={{ backgroundColor: '#4b5563', color: 'white' }}
+                        >
+                            Check New Domain
+                        </button>
+                        <button
+                            onClick={handleDownloadReport}
+                            className="btn btn-primary"
+                        >
+                            Download PDF Report
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-                {/* ... cards ... */}
                 {/* DNS Recon */}
                 <ReportCard
                     title="DNS Records"
@@ -217,7 +225,7 @@ const Dashboard = ({ domain }) => {
 
                 {/* Subdomains */}
                 <ReportCard
-                    title="Subdomains (Passive)"
+                    title={`Subdomains (Passive)${data.subdomains && (data.subdomains.subdomains?.length || (Array.isArray(data.subdomains) ? data.subdomains.length : 0)) ? ` - ${data.subdomains.subdomains?.length || data.subdomains.length} Found` : ''}`}
                     loading={loading.subdomains}
                     data={data.subdomains ? (
                         data.subdomains.subdomains ? (

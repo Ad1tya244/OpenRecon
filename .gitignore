@@ -27,6 +27,9 @@ backend/venv/
 env/
 backend/server.log
 *.log
+verify_*.py
+debug_*.py
+test_*.py
 
 # Editor
 .vscode/
