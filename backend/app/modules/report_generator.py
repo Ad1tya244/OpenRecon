@@ -41,7 +41,12 @@ class PDF(FPDF):
     def add_key_value(self, key, value):
         self.set_font('helvetica', 'B', 10)
         key = sanitize_text(str(key))
-        self.cell(50, 6, key + ":", align='L', new_x="RIGHT", new_y="TOP")
+        label_w = 50
+        
+        if self.get_x() + label_w > self.w - self.r_margin:
+            self.ln()
+            
+        self.cell(label_w, 6, key + ":", align='L', new_x="RIGHT", new_y="TOP")
         
         self.set_font('helvetica', '', 10)
         val_str = str(value)
@@ -52,13 +57,19 @@ class PDF(FPDF):
         
     def add_list_item(self, item):
         self.set_font('helvetica', '', 10)
-        self.cell(10, 6, "-", new_x="RIGHT", new_y="TOP")
+        marker_w = 10
+        
+        if self.get_x() + marker_w > self.w - self.r_margin:
+            self.ln()
+            
+        self.cell(marker_w, 6, "-", new_x="RIGHT", new_y="TOP")
+        
         item_str = mask_sensitive_data(str(item))
         item_str = sanitize_text(item_str)
+        
         self.multi_cell(0, 6, item_str, new_x="LMARGIN", new_y="NEXT")
 
 def mask_sensitive_data(text: str) -> str:
-    """ Masks potential API keys or secrets in output. """
     patterns = [
         (r'(api_key|apikey|secret|token|password|passwd|pwd)\s*[:=]\s*["\'](.*?)["\']', r'\1 = "***"'),
         (r'(api_key|apikey|secret|token|password|passwd|pwd)\s*[:=]\s*([a-zA-Z0-9_\-]{8,})', r'\1 = "***"')
@@ -76,7 +87,20 @@ def sanitize_text(text: str) -> str:
 
 def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") -> str:
     """
-    Generates a PDF report from the full scan data.
+    Generates PDF based on strictly ordered sections:
+    1. Infrastructure & Hosting
+    2. DNS Record
+    3. Domain Registration
+    4. Subdomains
+    5. SSL/TLS Security
+    6. Security Headers
+    7. Email Security
+    8. Technology Stack
+    9. Open Ports
+    10. Network Footprint
+    11. Public Files
+    12. Historical Intelligence
+    13. Intelligence Analyzer Data
     """
     pdf = PDF()
     pdf.add_page()
@@ -88,33 +112,242 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     pdf.set_text_color(0, 0, 0)
     pdf.ln(10)
     
-    # Target Info
+    # Extract Modules (Safe gets)
+    full = scan_data.get("full_results") or {}
     target = scan_data.get("target", "Unknown")
-    pdf.chapter_title(f"Target: {target}")
     
-    # Risk Assessment
-    attack_surface = scan_data.get("attack_surface") or {}
-    risk = attack_surface.get("risk_assessment") or {}
+    # 1. Infrastructure & Hosting
+    pdf.chapter_title("1. Infrastructure & Hosting")
+    ip_intel = full.get("ip_intelligence") or {}
+    net = full.get("network_footprint") or {}
     
-    pdf.set_font('helvetica', 'B', 12)
-    pdf.cell(40, 10, f"Risk Grade: {risk.get('grade', 'N/A')}")
-    pdf.cell(40, 10, f"Score: {risk.get('score', 0)}")
-    pdf.ln(15)
+    # Summary of Providers
+    providers = net.get("hosting_providers") or {}
+    if providers:
+        pdf.add_key_value("Primary Providers", ", ".join(f"{p} ({c})" for p, c in providers.items()))
     
-    # Executive Summary
-    pdf.chapter_title("Executive Summary")
-    summary = attack_surface.get("summary") or {}
-    pdf.add_key_value("Critical Risks", summary.get("critical_risks", 0))
-    pdf.add_key_value("Medium Risks", summary.get("medium_risks", 0))
-    pdf.add_key_value("Total Subdomains", summary.get("total_subdomains", 0))
+    # Summary of Locations/Orgs from IP Intel
+    if isinstance(ip_intel, dict):
+        locations = set()
+        orgs = set()
+        for _, details in ip_intel.items():
+            if isinstance(details, dict):
+                if details.get("country"): locations.add(details.get("country"))
+                if details.get("org"): orgs.add(details.get("org"))
+        
+        if locations: pdf.add_key_value("Locations", ", ".join(locations))
+        if orgs: pdf.add_key_value("Organizations", ", ".join(orgs))
+    
+    # Cloud Unprotected
+    cloud = net.get("cloud_unprotected") or []
+    if cloud:
+         pdf.set_text_color(200, 0, 0)
+         pdf.add_key_value("Unprotected Cloud IPs", f"{len(cloud)} found")
+         pdf.set_text_color(0, 0, 0)
+    
     pdf.ln(5)
+
+    # 2. DNS Record
+    pdf.chapter_title("2. DNS Record")
+    dns = full.get("dns") or {}
+    if dns:
+        for type, records in dns.items():
+            if type == "email_security": continue # Skip, handled later
+            if records:
+                pdf.add_key_value(type, ", ".join(str(r) for r in records) if isinstance(records, list) else str(records))
+    else:
+        pdf.chapter_body("No DNS records found.")
+    pdf.ln(5)
+
+    # 3. Domain Registration (Whois)
+    pdf.chapter_title("3. Domain Registration")
+    whois = full.get("whois") or {}
+    if isinstance(whois, dict) and "error" not in whois:
+        pdf.add_key_value("Registrar", whois.get("registrar", "Unknown"))
+        pdf.add_key_value("Created Date", str(whois.get("creation_date", "Unknown")))
+        pdf.add_key_value("Expiration Date", str(whois.get("expiration_date", "Unknown")))
+        pdf.add_key_value("Registrant", str(whois.get("registrant", "Redacted/Unknown")))
+        if whois.get("emails"):
+             pdf.add_key_value("Contact Emails", ", ".join(whois.get("emails")) if isinstance(whois.get("emails"), list) else str(whois.get("emails")))
+    else:
+        pdf.chapter_body("Whois data unavailable.")
+    pdf.ln(5)
+
+    # 4. Subdomains
+    pdf.chapter_title("4. Subdomains")
+    sub_data = full.get("subdomains") or {}
+    sub_list = sub_data if isinstance(sub_data, list) else sub_data.get("subdomains", [])
     
-    # Intelligence Findings (Consolidated)
+    if sub_list:
+        pdf.add_key_value("Total Found", len(sub_list))
+        for item in sub_list:
+            if isinstance(item, str):
+                text = item
+            else:
+                host = item.get("hostname", "")
+                flags = item.get("flags", [])
+                text = f"{host} [{', '.join(flags)}]" if flags else host
+            pdf.add_list_item(text)
+    else:
+        pdf.chapter_body("No subdomains found.")
+    pdf.ln(5)
+
+    # 5. SSL/TLS Security
+    pdf.chapter_title("5. SSL/TLS Security")
+    ssl = full.get("ssl") or {}
+    if ssl:
+         status = "Expired" if ssl.get("is_expired") else "Valid"
+         pdf.add_key_value("Status", status)
+         pdf.add_key_value("Issuer", str((ssl.get("issuer") or {}).get("commonName", "Unknown")))
+         pdf.add_key_value("Protocol", ssl.get("protocol", "TLSv1.2/1.3")) # Often standardized
+         pdf.add_key_value("Issued On", str(ssl.get("notBefore", "N/A")))
+         pdf.add_key_value("Expires On", str(ssl.get("notAfter", "N/A")))
+    else:
+        pdf.chapter_body("SSL/TLS data unavailable.")
+    pdf.ln(5)
+
+    # 6. Security Headers
+    pdf.chapter_title("6. Security Headers")
+    sec = full.get("security_headers") or {}
+    pdf.add_key_value("Overall Score", sec.get("score", "N/A"))
+    
+    missing = sec.get("missing_headers") or []
+    if missing:
+        pdf.set_text_color(200, 0, 0)
+        pdf.chapter_body("Missing Headers:")
+        pdf.set_text_color(0, 0, 0)
+        for m in missing:
+            pdf.add_list_item(f"{m.get('header')}: {m.get('description')}")
+    else:
+        pdf.chapter_body("All recommended security headers are present.")
+    pdf.ln(5)
+
+    # 7. Email Security
+    pdf.chapter_title("7. Email Security")
+    # Usually nested in DNS
+    email_sec = (full.get("dns") or {}).get("email_security") or {}
+    if email_sec:
+        # SPF
+        spf = email_sec.get("spf") or {}
+        pdf.add_key_value("SPF Record", "Present" if spf.get("present") else "Missing")
+        if spf.get("record"): pdf.add_list_item(f"Raw: {spf.get('record')}")
+        
+        # DMARC
+        dmarc = email_sec.get("dmarc") or {}
+        pdf.add_key_value("DMARC Record", "Present" if dmarc.get("present") else "Missing")
+        if dmarc.get("policy"): pdf.add_key_value("Policy", dmarc.get("policy"))
+        
+        # DKIM (passive check usually inconclusive, but if data exists)
+        dkim = email_sec.get("dkim_dns_check") or {}
+        if dkim.get("note"): pdf.add_key_value("DKIM Note", dkim.get("note"))
+    else:
+        pdf.chapter_body("No explicit email security data found in DNS.")
+    pdf.ln(5)
+
+    # 8. Technology Stack
+    pdf.chapter_title("8. Technology Stack")
+    tech = full.get("tech") or {}
+    if tech:
+        pdf.add_key_value("Server", tech.get("server", "Unknown"))
+        if tech.get("frameworks"):
+            pdf.add_key_value("Frameworks", ", ".join(tech.get("frameworks")))
+        if tech.get("proxies"):
+            pdf.add_key_value("Proxies", ", ".join(tech.get("proxies")))
+    else:
+        pdf.chapter_body("No technology stack detected.")
+    pdf.ln(5)
+
+    # 9. Open Ports
+    pdf.chapter_title("9. Open Ports")
+    ports = full.get("ports") or {}
+    open_ports = ports.get("open_ports") or []
+    if open_ports:
+        for p in open_ports:
+            pdf.add_list_item(f"Port {p.get('port')} ({p.get('service')}) - {p.get('banner', 'No banner')}")
+    else:
+        pdf.chapter_body("No open ports detected on target.")
+    pdf.ln(5)
+
+    # 10. Network Footprint (Detailed)
+    pdf.chapter_title("10. Detailed Network Footprint")
+    if net:
+         pdf.add_key_value("Total Unique IPs", net.get("total_ips", 0))
+         
+         asns = net.get("asns") or {}
+         if asns:
+             pdf.set_font('helvetica', 'B', 10)
+             pdf.cell(0, 6, "Autonomous Systems (ASNs):", new_x="LMARGIN", new_y="NEXT")
+             for asn, count in asns.items():
+                 pdf.add_list_item(f"{asn}: {count} IPs")
+
+         # IP List
+         ips = (full.get("dns") or {}).get("A", [])
+         # Add IPs from IP intel if not in DNS? No, sticking to main sources.
+         if ips:
+             pdf.chapter_body("Resolved IP Addresses:")
+             for ip in ips:
+                 detail = (ip_intel.get(ip) or {}) if isinstance(ip_intel, dict) else {}
+                 loc = f"{detail.get('city', '')} {detail.get('country', '')}"
+                 org = detail.get('org', '')
+                 pdf.add_list_item(f"{ip} - {org} [{loc}]")
+    else:
+        pdf.chapter_body("No network footprint data available.")
+    pdf.ln(5)
+
+    # 11. Public Files & Leaks
+    pdf.chapter_title("11. Public Files & Code Leaks")
+    
+    # Public Files
+    files = full.get("public_files") or []
+    if isinstance(files, dict): files = files.get("files", [])
+    if files:
+        pdf.cell(0, 6, "Exposed Files:", new_x="LMARGIN", new_y="NEXT")
+        for f in files:
+            pdf.add_list_item(f"{f.get('url')} (Status: {f.get('status')})")
+    
+    # Code Leaks
+    leaks = full.get("code_leaks") or []
+    if isinstance(leaks, dict): leaks = leaks.get("leaks", [])
+    if leaks:
+        pdf.ln(2)
+        pdf.cell(0, 6, "Code Leaks:", new_x="LMARGIN", new_y="NEXT")
+        for leak in leaks:
+            pdf.add_list_item(f"{leak.get('type')} at {leak.get('url')}")
+            
+    # Directory Exposure
+    dirs = full.get("directory_exposure") or []
+    if isinstance(dirs, dict): dirs = dirs.get("exposed_directories", [])
+    if dirs:
+        pdf.ln(2)
+        pdf.cell(0, 6, "Directory Listings:", new_x="LMARGIN", new_y="NEXT")
+        for d in dirs:
+            pdf.add_list_item(f"{d.get('url')} (Status: {d.get('status')})")
+            
+    if not (files or leaks or dirs):
+        pdf.chapter_body("No public files, leaks, or exposed directories found.")
+    pdf.ln(5)
+
+    # 12. Historical Intelligence
+    pdf.chapter_title("12. Historical Intelligence")
+    hist = full.get("historical") or {}
+    if hist:
+        stack = hist.get("tech_stack_history") or []
+        if stack:
+            pdf.add_key_value("Past Tech Stack", ", ".join(mask_sensitive_data(str(x)) for x in stack))
+        
+        endpoints = hist.get("historical_endpoints") or []
+        if endpoints:
+            pdf.add_key_value("Historical Endpoints", f"{len(endpoints)} found")
+    else:
+        pdf.chapter_body("No historical data available.")
+    pdf.ln(5)
+
+    # 13. Intelligence Analyzer Data
+    pdf.chapter_title("13. Intelligence Analysis")
     findings = scan_data.get("intelligence") or []
     if findings:
-        pdf.chapter_title(f"Strategic Intelligence ({len(findings)} Findings)")
         for finding in findings:
-            title = finding.get("title", "Unknown Finding")
+            title = finding.get("title", "Unknown")
             severity = finding.get("severity", "Unknown")
             
             pdf.set_font('helvetica', 'B', 11)
@@ -128,201 +361,15 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
             desc = finding.get("description", "")
             pdf.set_font('helvetica', '', 10)
             pdf.multi_cell(0, 5, desc)
-            pdf.ln(1)
             
             signals = finding.get("signals") or []
             if signals:
-                pdf.set_font('helvetica', 'I', 9)
-                pdf.cell(0, 5, "Contributing Signals:", new_x="LMARGIN", new_y="NEXT")
-                pdf.set_font('helvetica', '', 9)
                 for s in signals:
-                    pdf.set_x(pdf.l_margin + 2)
-                    pdf.cell(5, 5, "-")
-                    pdf.set_x(pdf.l_margin + 7)
-                    pdf.multi_cell(0, 5, str(s))
-            pdf.ln(4)
-    
-    # Detailed Findings - by Module
-    full_results = scan_data.get("full_results") or {}
-    
-    # 1. Tech Stack
-    pdf.chapter_title("Technology Stack")
-    tech = full_results.get("tech") or {}
-    if tech:
-        pdf.add_key_value("Server", tech.get("server", "Unknown"))
-        if tech.get("frameworks"):
-            pdf.add_key_value("Frameworks", ", ".join(tech.get("frameworks")))
-        if tech.get("proxies"):
-            pdf.add_key_value("Proxies", ", ".join(tech.get("proxies")))
+                    pdf.add_list_item(str(s))
+            pdf.ln(3)
     else:
-        pdf.chapter_body("No technology stack data available.")
-    pdf.ln(5)
+        pdf.chapter_body("No critical intelligence findings detected.")
 
-    # 2. Key Risks / Exposure Points
-    pdf.chapter_title("High Priority Exposures")
-    exposures = attack_surface.get("exposure_points") or []
-    if exposures:
-        for item in exposures:
-            pdf.add_list_item(f"{item.get('type')}: {item.get('details') or item.get('paths')}")
-    else:
-        pdf.chapter_body("No critical exposure points identified.")
-    
-    # 3. Security Headers
-    pdf.chapter_title("Security Headers Policy")
-    sec_headers = full_results.get("security_headers") or {}
-    missing = sec_headers.get("missing_headers") or []
-    pdf.add_key_value("Score", sec_headers.get("score", "N/A"))
-    if missing:
-        pdf.set_text_color(200, 0, 0)
-        pdf.chapter_body(f"Missing {len(missing)} recommended headers:")
-        pdf.set_text_color(0, 0, 0)
-        for m in missing:
-            pdf.add_list_item(f"{m.get('header')}: {m.get('description')}")
-    else:
-        pdf.chapter_body("Good security header posture detected.")
-
-    # 4. Open Ports
-    pdf.chapter_title("Open Ports")
-    ports_data = full_results.get("ports") or {}
-    open_ports = ports_data.get("open_ports") or []
-    if open_ports:
-        for p in open_ports:
-            pdf.add_list_item(f"Port {p.get('port')} ({p.get('service')}) - {p.get('banner', 'No banner')}")
-    else:
-        pdf.chapter_body("No open ports found (top 10 common ports scanned).")
-
-    # 5. Network Footprint
-    pdf.chapter_title("Network Footprint & Hosting")
-    net = full_results.get("network_footprint") or {}
-    if net:
-         pdf.add_key_value("Total IPs", net.get("total_ips", 0))
-         
-         hosting = net.get("hosting_providers") or {}
-         if hosting:
-             pdf.set_font('helvetica', 'B', 10)
-             pdf.cell(0, 6, "Hosting Providers:", new_x="LMARGIN", new_y="NEXT")
-             for provider, count in hosting.items():
-                 pdf.add_list_item(f"{provider}: {count} IPs")
-         
-         asns = net.get("asns") or {}
-         if asns:
-             pdf.set_font('helvetica', 'B', 10)
-             pdf.cell(0, 6, "Autonomous Systems (ASNs):", new_x="LMARGIN", new_y="NEXT")
-             for asn, count in asns.items():
-                 pdf.add_list_item(f"{asn}: {count} IPs")
-
-         cloud = net.get("cloud_unprotected") or []
-         if cloud:
-             pdf.set_font('helvetica', 'B', 10)
-             pdf.set_text_color(200, 0, 0)
-             pdf.cell(0, 6, "Unprotected Cloud IPs:", new_x="LMARGIN", new_y="NEXT")
-             pdf.set_text_color(0, 0, 0)
-             for ip in cloud:
-                 pdf.add_list_item(str(ip))
-    else:
-        pdf.chapter_body("No network footprint data available.")
-
-    # 6. IP Intelligence
-    if full_results.get("ip_intelligence"):
-        pdf.chapter_title("IP Intelligence")
-        ip_intel = full_results.get("ip_intelligence") or {}
-        if isinstance(ip_intel, dict):
-            for ip, details in ip_intel.items():
-                if isinstance(details, dict) and "error" not in details:
-                     pdf.add_key_value(f"IP {ip}", f"{details.get('city', 'Unknown')}, {details.get('country', 'Unknown')} ({details.get('org', 'Unknown')})")
-                else:
-                     pdf.add_key_value(f"IP {ip}", "No details found")
-
-    # 7. Code Leaks
-    leaks = full_results.get("code_leaks") or []
-    if isinstance(leaks, dict): leaks = leaks.get("leaks", [])
-    if not isinstance(leaks, list): leaks = []
-    
-    if leaks:
-        pdf.chapter_title(f"Code Leaks ({len(leaks)} found)")
-        for leak in leaks:
-            pdf.add_list_item(f"Type: {leak.get('type')} | Rule: {leak.get('rule_id')}")
-            pdf.add_list_item(f"URL: {leak.get('url')}")
-            pdf.ln(1)
-            
-    # 8. Public Files
-    files = full_results.get("public_files") or []
-    if isinstance(files, dict): files = files.get("files", [])
-    if not isinstance(files, list): files = []
-    
-    if files:
-        pdf.chapter_title(f"Exposed Public Files ({len(files)} found)")
-        for f in files:
-            pdf.add_list_item(f"{f.get('url')} (Status: {f.get('status')})")
-
-    # 9. Directory Exposure
-    dirs = full_results.get("directory_exposure") or []
-    if isinstance(dirs, dict): dirs = dirs.get("exposed_directories", [])
-    if not isinstance(dirs, list): dirs = []
-    
-    if dirs:
-        pdf.chapter_title(f"Directory Exposures ({len(dirs)} found)")
-        for d in dirs:
-            pdf.add_list_item(f"{d.get('url')} (Status: {d.get('status')})")
-
-    # 10. Historical Data
-    hist = full_results.get("historical") or {}
-    if hist:
-        pdf.chapter_title("Historical Intelligence")
-        stack = hist.get("tech_stack_history") or []
-        if stack:
-            pdf.add_key_value("Past Tech Stack", ", ".join(mask_sensitive_data(str(x)) for x in stack))
-        
-        endpoints = hist.get("historical_endpoints") or []
-        if endpoints:
-            pdf.add_key_value("Historical Endpoints", f"{len(endpoints)} found")
-
-    # 11. DNS & SSL Details
-    pdf.chapter_title("DNS & SSL Details")
-    
-    # DNS
-    dns = full_results.get("dns") or {}
-    if dns:
-        pdf.set_font('helvetica', 'B', 10)
-        pdf.cell(0, 6, "DNS Records:", new_x="LMARGIN", new_y="NEXT")
-        for type, records in dns.items():
-            if records:
-                pdf.add_key_value(type, ", ".join(str(r) for r in records) if isinstance(records, list) else str(records))
-    
-    # SSL
-    ssl_res = full_results.get("ssl") or {}
-    if ssl_res:
-         pdf.ln(4)
-         pdf.set_font('helvetica', 'B', 10)
-         pdf.cell(0, 6, "SSL Certificate:", new_x="LMARGIN", new_y="NEXT")
-         status = "Expired" if ssl_res.get("is_expired") else "Valid"
-         pdf.add_key_value("Status", status)
-         pdf.add_key_value("Issuer", str((ssl_res.get("issuer") or {}).get("commonName", "Unknown")))
-         pdf.add_key_value("Issued On", str(ssl_res.get("notBefore", "N/A")))
-         pdf.add_key_value("Expires On", str(ssl_res.get("notAfter", "N/A")))
-
-    # 12. Subdomains (Full List)
-    sub_data = full_results.get("subdomains") or {}
-    if isinstance(sub_data, list):
-         sub_list = sub_data
-    else:
-         sub_list = sub_data.get("subdomains", [])
-         
-    if sub_list:
-        count = len(sub_list)
-        pdf.chapter_title(f"Subdomains ({count} found)")
-        for item in sub_list:
-            if isinstance(item, str):
-                text = item
-            else:
-                host = item.get("hostname", "")
-                flags = item.get("flags", [])
-                if flags:
-                    text = f"{host} [{', '.join(flags)}]"
-                else:
-                    text = host
-            pdf.add_list_item(text)
-            
     # Save
     try:
         pdf.output(output_path)
