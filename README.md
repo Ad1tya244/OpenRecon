@@ -17,8 +17,12 @@ OpenRecon aggregates intelligence from multiple sources to build a comprehensive
 *   **📜 Code Leak Intelligence**: Check for potential secrets or repository leaks on platforms like GitHub.
 *   **📂 Public Files**: exposure check for sensitive files like `robots.txt`, `sitemap.xml`, `.enz`, etc.
 *   **⏳ Historical Intel**: specific analysis of past endpoints and tech stacks using Wayback Machine data.
-*   **📊 Attack Surface Graph**: Interactive visualization correlating Domains -> Subdomains -> IPs -> Risks.
-*   **📄 PDF Reporting**: Generate professional-grade reconnaissance reports with one click.
+*   **🧠 Attack Surface Intelligence**: Correlates findings to identify "High Risk" convergences (e.g. Exposed Admin + Open Management Port).
+*   **📊 Interactive Graph Visualization**: Dynamic D3.js force-directed graph with Zoom, Pan, and Trackpad support to visualize complex relationships (Domain -> Subdomain -> IP -> Hosting).
+*   **📄 Consolidated PDF Reporting**: Single-click generation of comprehensive reports including both raw scan data and synthesized intelligence.
+*   **🔎 Deep Network Footprint**: Mapped analysis of Hosting Providers, ASNs, and unprotected cloud instances.
+*   **📜 Code Leak & Historical Intel**: Integration with GitHub and Wayback Machine for secret scanning and legacy endpoint discovery.
+*   **✨ Modern UI**: Sleek, dark-mode dashboard with "Scan New Domain" functionality and responsive design.
 
 ## 🛠️ Technology Stack
 
