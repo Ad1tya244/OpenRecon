@@ -1,6 +1,6 @@
 from fpdf import FPDF
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 import re
 
 TITLE = "OpenRecon Security Assessment Report"
@@ -40,35 +40,25 @@ class PDF(FPDF):
         
     def add_key_value(self, key, value):
         self.set_font('helvetica', 'B', 10)
-        # Sanitize Key
         key = sanitize_text(str(key))
-        # Ensure we start at left margin? No, we trust caller, but let's be safe?
-        # self.set_x(self.l_margin) 
-        # Using new_x="RIGHT" for the label cell to move cursor for the value
         self.cell(50, 6, key + ":", align='L', new_x="RIGHT", new_y="TOP")
         
         self.set_font('helvetica', '', 10)
-        # Clean value
         val_str = str(value)
-        # Escape/Mask logic
         val_str = mask_sensitive_data(val_str)
-        # Sanitize Value
         val_str = sanitize_text(val_str)
         
-        # multi_cell with new_x="LMARGIN", new_y="NEXT" to reset line for next item
         self.multi_cell(0, 6, val_str, new_x="LMARGIN", new_y="NEXT")
         
     def add_list_item(self, item):
         self.set_font('helvetica', '', 10)
         self.cell(10, 6, "-", new_x="RIGHT", new_y="TOP")
-        # Sanitize
         item_str = mask_sensitive_data(str(item))
         item_str = sanitize_text(item_str)
         self.multi_cell(0, 6, item_str, new_x="LMARGIN", new_y="NEXT")
 
 def mask_sensitive_data(text: str) -> str:
     """ Masks potential API keys or secrets in output. """
-    # Same patterns as code_leak_recon
     patterns = [
         (r'(api_key|apikey|secret|token|password|passwd|pwd)\s*[:=]\s*["\'](.*?)["\']', r'\1 = "***"'),
         (r'(api_key|apikey|secret|token|password|passwd|pwd)\s*[:=]\s*([a-zA-Z0-9_\-]{8,})', r'\1 = "***"')
@@ -82,12 +72,6 @@ def mask_sensitive_data(text: str) -> str:
     return masked_text
 
 def sanitize_text(text: str) -> str:
-    """
-    Sanitize text for PDF compatible latin-1 encoding usually, 
-    but fpdf2 handles unicode better if font is loaded.
-    By default core fonts are latin-1.
-    We'll do basic replacement of unprintable chars.
-    """
     return text.encode('latin-1', 'replace').decode('latin-1')
 
 def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") -> str:
@@ -109,8 +93,8 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     pdf.chapter_title(f"Target: {target}")
     
     # Risk Assessment
-    attack_surface = scan_data.get("attack_surface", {})
-    risk = attack_surface.get("risk_assessment", {})
+    attack_surface = scan_data.get("attack_surface") or {}
+    risk = attack_surface.get("risk_assessment") or {}
     
     pdf.set_font('helvetica', 'B', 12)
     pdf.cell(40, 10, f"Risk Grade: {risk.get('grade', 'N/A')}")
@@ -119,14 +103,14 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     
     # Executive Summary
     pdf.chapter_title("Executive Summary")
-    summary = attack_surface.get("summary", {})
+    summary = attack_surface.get("summary") or {}
     pdf.add_key_value("Critical Risks", summary.get("critical_risks", 0))
     pdf.add_key_value("Medium Risks", summary.get("medium_risks", 0))
     pdf.add_key_value("Total Subdomains", summary.get("total_subdomains", 0))
     pdf.ln(5)
     
     # Intelligence Findings (Consolidated)
-    findings = scan_data.get("intelligence", [])
+    findings = scan_data.get("intelligence") or []
     if findings:
         pdf.chapter_title(f"Strategic Intelligence ({len(findings)} Findings)")
         for finding in findings:
@@ -146,47 +130,37 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
             pdf.multi_cell(0, 5, desc)
             pdf.ln(1)
             
-            signals = finding.get("signals", [])
-            signals = finding.get("signals", [])
+            signals = finding.get("signals") or []
             if signals:
                 pdf.set_font('helvetica', 'I', 9)
                 pdf.cell(0, 5, "Contributing Signals:", new_x="LMARGIN", new_y="NEXT")
                 pdf.set_font('helvetica', '', 9)
                 for s in signals:
-                    # Determine safe width
-                    bullet_width = 5
-                    # Move to start of line (margin) to ensure we are aligned
                     pdf.set_x(pdf.l_margin + 2)
-                    pdf.cell(bullet_width, 5, "-")
-                    
-                    # Calculate remaining width for text
-                    # current X is now after the bullet? No, cell moves cursor if new_x is not set? 
-                    # Default: new_x="RIGHT" in FPDF2? No, default is "RIGHT".
-                    
-                    # Actually FPDF2 default is tricky. Let's be explicit
-                    # Reset X for text
-                    pdf.set_x(pdf.l_margin + 2 + bullet_width)
-                    remaining_width = pdf.w - pdf.r_margin - pdf.get_x()
-                    
-                    pdf.multi_cell(remaining_width, 5, str(s))
+                    pdf.cell(5, 5, "-")
+                    pdf.set_x(pdf.l_margin + 7)
+                    pdf.multi_cell(0, 5, str(s))
             pdf.ln(4)
     
     # Detailed Findings - by Module
-    full_results = scan_data.get("full_results", {})
+    full_results = scan_data.get("full_results") or {}
     
     # 1. Tech Stack
     pdf.chapter_title("Technology Stack")
-    tech = full_results.get("tech", {})
-    pdf.add_key_value("Server", tech.get("server", "Unknown"))
-    if tech.get("frameworks"):
-        pdf.add_key_value("Frameworks", ", ".join(tech.get("frameworks")))
-    if tech.get("proxies"):
-        pdf.add_key_value("Proxies", ", ".join(tech.get("proxies")))
+    tech = full_results.get("tech") or {}
+    if tech:
+        pdf.add_key_value("Server", tech.get("server", "Unknown"))
+        if tech.get("frameworks"):
+            pdf.add_key_value("Frameworks", ", ".join(tech.get("frameworks")))
+        if tech.get("proxies"):
+            pdf.add_key_value("Proxies", ", ".join(tech.get("proxies")))
+    else:
+        pdf.chapter_body("No technology stack data available.")
     pdf.ln(5)
 
     # 2. Key Risks / Exposure Points
     pdf.chapter_title("High Priority Exposures")
-    exposures = attack_surface.get("exposure_points", [])
+    exposures = attack_surface.get("exposure_points") or []
     if exposures:
         for item in exposures:
             pdf.add_list_item(f"{item.get('type')}: {item.get('details') or item.get('paths')}")
@@ -195,8 +169,9 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     
     # 3. Security Headers
     pdf.chapter_title("Security Headers Policy")
-    sec_headers = full_results.get("security_headers", {})
-    missing = sec_headers.get("missing_headers", [])
+    sec_headers = full_results.get("security_headers") or {}
+    missing = sec_headers.get("missing_headers") or []
+    pdf.add_key_value("Score", sec_headers.get("score", "N/A"))
     if missing:
         pdf.set_text_color(200, 0, 0)
         pdf.chapter_body(f"Missing {len(missing)} recommended headers:")
@@ -206,59 +181,151 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     else:
         pdf.chapter_body("Good security header posture detected.")
 
-    # 4. Recon Data Summaries
-    pdf.chapter_title("Network Reconnaissance Data")
+    # 4. Open Ports
+    pdf.chapter_title("Open Ports")
+    ports_data = full_results.get("ports") or {}
+    open_ports = ports_data.get("open_ports") or []
+    if open_ports:
+        for p in open_ports:
+            pdf.add_list_item(f"Port {p.get('port')} ({p.get('service')}) - {p.get('banner', 'No banner')}")
+    else:
+        pdf.chapter_body("No open ports found (top 10 common ports scanned).")
+
+    # 5. Network Footprint
+    pdf.chapter_title("Network Footprint & Hosting")
+    net = full_results.get("network_footprint") or {}
+    if net:
+         pdf.add_key_value("Total IPs", net.get("total_ips", 0))
+         
+         hosting = net.get("hosting_providers") or {}
+         if hosting:
+             pdf.set_font('helvetica', 'B', 10)
+             pdf.cell(0, 6, "Hosting Providers:", new_x="LMARGIN", new_y="NEXT")
+             for provider, count in hosting.items():
+                 pdf.add_list_item(f"{provider}: {count} IPs")
+         
+         asns = net.get("asns") or {}
+         if asns:
+             pdf.set_font('helvetica', 'B', 10)
+             pdf.cell(0, 6, "Autonomous Systems (ASNs):", new_x="LMARGIN", new_y="NEXT")
+             for asn, count in asns.items():
+                 pdf.add_list_item(f"{asn}: {count} IPs")
+
+         cloud = net.get("cloud_unprotected") or []
+         if cloud:
+             pdf.set_font('helvetica', 'B', 10)
+             pdf.set_text_color(200, 0, 0)
+             pdf.cell(0, 6, "Unprotected Cloud IPs:", new_x="LMARGIN", new_y="NEXT")
+             pdf.set_text_color(0, 0, 0)
+             for ip in cloud:
+                 pdf.add_list_item(str(ip))
+    else:
+        pdf.chapter_body("No network footprint data available.")
+
+    # 6. IP Intelligence
+    if full_results.get("ip_intelligence"):
+        pdf.chapter_title("IP Intelligence")
+        ip_intel = full_results.get("ip_intelligence") or {}
+        if isinstance(ip_intel, dict):
+            for ip, details in ip_intel.items():
+                if isinstance(details, dict) and "error" not in details:
+                     pdf.add_key_value(f"IP {ip}", f"{details.get('city', 'Unknown')}, {details.get('country', 'Unknown')} ({details.get('org', 'Unknown')})")
+                else:
+                     pdf.add_key_value(f"IP {ip}", "No details found")
+
+    # 7. Code Leaks
+    leaks = full_results.get("code_leaks") or []
+    if isinstance(leaks, dict): leaks = leaks.get("leaks", [])
+    if not isinstance(leaks, list): leaks = []
+    
+    if leaks:
+        pdf.chapter_title(f"Code Leaks ({len(leaks)} found)")
+        for leak in leaks:
+            pdf.add_list_item(f"Type: {leak.get('type')} | Rule: {leak.get('rule_id')}")
+            pdf.add_list_item(f"URL: {leak.get('url')}")
+            pdf.ln(1)
+            
+    # 8. Public Files
+    files = full_results.get("public_files") or []
+    if isinstance(files, dict): files = files.get("files", [])
+    if not isinstance(files, list): files = []
+    
+    if files:
+        pdf.chapter_title(f"Exposed Public Files ({len(files)} found)")
+        for f in files:
+            pdf.add_list_item(f"{f.get('url')} (Status: {f.get('status')})")
+
+    # 9. Directory Exposure
+    dirs = full_results.get("directory_exposure") or []
+    if isinstance(dirs, dict): dirs = dirs.get("exposed_directories", [])
+    if not isinstance(dirs, list): dirs = []
+    
+    if dirs:
+        pdf.chapter_title(f"Directory Exposures ({len(dirs)} found)")
+        for d in dirs:
+            pdf.add_list_item(f"{d.get('url')} (Status: {d.get('status')})")
+
+    # 10. Historical Data
+    hist = full_results.get("historical") or {}
+    if hist:
+        pdf.chapter_title("Historical Intelligence")
+        stack = hist.get("tech_stack_history") or []
+        if stack:
+            pdf.add_key_value("Past Tech Stack", ", ".join(mask_sensitive_data(str(x)) for x in stack))
+        
+        endpoints = hist.get("historical_endpoints") or []
+        if endpoints:
+            pdf.add_key_value("Historical Endpoints", f"{len(endpoints)} found")
+
+    # 11. DNS & SSL Details
+    pdf.chapter_title("DNS & SSL Details")
     
     # DNS
-    dns = full_results.get("dns", {})
+    dns = full_results.get("dns") or {}
     if dns:
-        pdf.add_key_value("DNS Records", f"Found records for {', '.join(dns.keys())}")
-        
+        pdf.set_font('helvetica', 'B', 10)
+        pdf.cell(0, 6, "DNS Records:", new_x="LMARGIN", new_y="NEXT")
+        for type, records in dns.items():
+            if records:
+                pdf.add_key_value(type, ", ".join(str(r) for r in records) if isinstance(records, list) else str(records))
+    
     # SSL
-    ssl_res = full_results.get("ssl", {})
+    ssl_res = full_results.get("ssl") or {}
     if ssl_res:
+         pdf.ln(4)
+         pdf.set_font('helvetica', 'B', 10)
+         pdf.cell(0, 6, "SSL Certificate:", new_x="LMARGIN", new_y="NEXT")
          status = "Expired" if ssl_res.get("is_expired") else "Valid"
-         pdf.add_key_value("SSL Status", status)
-         pdf.add_key_value("Issuer", str(ssl_res.get("issuer", {}).get("commonName", "Unknown")))
+         pdf.add_key_value("Status", status)
+         pdf.add_key_value("Issuer", str((ssl_res.get("issuer") or {}).get("commonName", "Unknown")))
+         pdf.add_key_value("Issued On", str(ssl_res.get("notBefore", "N/A")))
+         pdf.add_key_value("Expires On", str(ssl_res.get("notAfter", "N/A")))
 
-    # Subdomains (Limit output)
-    sub_data = full_results.get("subdomains", {})
+    # 12. Subdomains (Full List)
+    sub_data = full_results.get("subdomains") or {}
     if isinstance(sub_data, list):
          sub_list = sub_data
     else:
          sub_list = sub_data.get("subdomains", [])
-
+         
     if sub_list:
         count = len(sub_list)
         pdf.chapter_title(f"Subdomains ({count} found)")
-        # Print first 20
-        idx = 0
         for item in sub_list:
-            if idx >= 20: 
-                break
-            
             if isinstance(item, str):
                 text = item
             else:
-                # Dict with flags
                 host = item.get("hostname", "")
                 flags = item.get("flags", [])
                 if flags:
                     text = f"{host} [{', '.join(flags)}]"
                 else:
                     text = host
-                    
             pdf.add_list_item(text)
-            idx += 1
             
-        if count > 20:
-            pdf.add_list_item(f"... and {count-20} more.")
-
     # Save
     try:
         pdf.output(output_path)
         return output_path
     except Exception as e:
         return f"Error generating PDF: {str(e)}"
-
-

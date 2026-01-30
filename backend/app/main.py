@@ -268,9 +268,10 @@ async def generate_consolidated_report(request: Request, data: dict):
         data["attack_surface"] = {"error": str(e)}
 
     # 2. Re-run Intelligence Correlator (cheap, deterministic)
-    # Even if frontend sent it, good to double check or just use it. 
-    # Let's generate it freshly from the data provided to be safe/consistent.
-    data["intelligence"] = attack_surface_intelligence.generate_intelligence(data)
+    try:
+        data["intelligence"] = attack_surface_intelligence.generate_intelligence(data)
+    except Exception as e:
+        data["intelligence"] = []
 
     # 3. Structure for Report Generator
     report_input = {
