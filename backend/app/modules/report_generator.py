@@ -86,6 +86,21 @@ def mask_sensitive_data(text: str) -> str:
 def sanitize_text(text: str) -> str:
     return text.encode('latin-1', 'replace').decode('latin-1')
 
+def format_date(date_str: Any) -> str:
+    if not date_str or str(date_str).lower() in ["none", "unknown", "n/a"]:
+        return "Unknown"
+    
+    s = str(date_str).split('.')[0]
+    formats = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+    
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.strftime("%d/%m/%Y")
+        except ValueError:
+            continue
+    return str(date_str)
+
 def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") -> str:
     """
     Generates PDF based on strictly ordered sections:
@@ -156,13 +171,15 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     whois = full.get("whois") or {}
     if isinstance(whois, dict) and "error" not in whois:
         pdf.add_key_value("Registrar", whois.get("registrar", "Unknown"))
-        pdf.add_key_value("Created Date", str(whois.get("creation_date_iso") or whois.get("creation_date", "Unknown")))
+        
+        created = whois.get("creation_date_iso") or whois.get("creation_date")
+        pdf.add_key_value("Created Date", format_date(created))
         
         age = whois.get("age_days")
         if age:
              pdf.add_key_value("Age", f"{age} days")
              
-        pdf.add_key_value("Expiration Date", str(whois.get("expiration_date", "Unknown")))
+        pdf.add_key_value("Expiration Date", format_date(whois.get("expiration_date")))
         
         flags = whois.get("flags")
         if flags:
@@ -212,8 +229,8 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
          issuer_name = issuer.get("organizationName") or issuer.get("commonName") or "Unknown"
          pdf.add_key_value("Issuer", str(issuer_name))
          
-         pdf.add_key_value("Valid From", str(ssl.get("valid_from") or ssl.get("notBefore", "N/A")))
-         pdf.add_key_value("Valid Until", str(ssl.get("valid_until") or ssl.get("notAfter", "N/A")))
+         pdf.add_key_value("Valid From", format_date(ssl.get("valid_from") or ssl.get("notBefore")))
+         pdf.add_key_value("Valid Until", format_date(ssl.get("valid_until") or ssl.get("notAfter")))
          
          if ssl.get("serial_number"):
              pdf.add_key_value("Serial Number", str(ssl.get("serial_number")))
@@ -261,7 +278,6 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
         spf = email_sec.get("spf") or {}
         pdf.add_key_value("SPF Record", "Present" if spf.get("present") else "Missing")
         if spf.get("status"): pdf.add_key_value("SPF Status", spf.get("status"))
-        if spf.get("record"): pdf.add_list_item(f"Raw: {spf.get('record')}")
         
         # DMARC
         dmarc = email_sec.get("dmarc") or {}

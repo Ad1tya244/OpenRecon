@@ -182,9 +182,12 @@ const Dashboard = ({ domain, onReset }) => {
                     loading={loading.whois}
                     data={data.whois ? {
                         Registrar: data.whois.registrar,
-                        Created: data.whois.creation_date_iso ? new Date(data.whois.creation_date_iso).toLocaleDateString() : data.whois.creation_date,
+                        // Helper function definition at the top of component logic or inline usage?
+                        // Since I can't easily insert a helper function inside the component body with replace_file (it's fragmented), I'll just change the calls to use 'en-GB' directly for now.
+
+                        Created: (data.whois.creation_date_iso || data.whois.creation_date) ? new Date(data.whois.creation_date_iso || data.whois.creation_date).toLocaleDateString('en-GB') : 'Unknown',
                         Age: data.whois.age_days ? `${data.whois.age_days} days` : 'Unknown',
-                        Expires: data.whois.expiration_date,
+                        Expires: data.whois.expiration_date ? new Date(data.whois.expiration_date).toLocaleDateString('en-GB') : 'Unknown',
                         Flags: data.whois.flags?.length > 0 ? data.whois.flags.join(", ") : "None"
                     } : null}
                     type="kv"
@@ -197,8 +200,8 @@ const Dashboard = ({ domain, onReset }) => {
                     data={data.ssl ? {
                         Valid: data.ssl.valid ? 'Yes' : 'No',
                         Issuer: data.ssl.issuer?.organizationName || data.ssl.issuer?.commonName || 'Unknown',
-                        "Valid From": data.ssl.valid_from ? new Date(data.ssl.valid_from).toLocaleDateString() : 'Unknown',
-                        "Valid Until": data.ssl.valid_until ? new Date(data.ssl.valid_until).toLocaleDateString() : 'Unknown',
+                        "Valid From": data.ssl.valid_from ? new Date(data.ssl.valid_from).toLocaleDateString('en-GB') : 'Unknown',
+                        "Valid Until": data.ssl.valid_until ? new Date(data.ssl.valid_until).toLocaleDateString('en-GB') : 'Unknown',
                         "Serial Number": data.ssl.serial_number,
                         "Signature Algo": data.ssl.signature_algorithm
                     } : null}
