@@ -33,6 +33,8 @@ const Dashboard = ({ domain, onReset }) => {
 
     const [viewGraph, setViewGraph] = useState(false)
     const [viewIntel, setViewIntel] = useState(false)
+    const [intelFilter, setIntelFilter] = useState(null)
+
     const [data, setData] = useState({
         // ... (existing)
         dns: null,
@@ -120,7 +122,12 @@ const Dashboard = ({ domain, onReset }) => {
     }
 
     if (viewIntel) {
-        return <IntelligenceReport domain={domain} initialData={data.intelligence} onBack={() => setViewIntel(false)} />
+        return <IntelligenceReport
+            domain={domain}
+            initialData={data.intelligence}
+            filter={intelFilter}
+            onBack={() => { setViewIntel(false); setIntelFilter(null); }}
+        />
     }
 
     return (
@@ -134,15 +141,25 @@ const Dashboard = ({ domain, onReset }) => {
                     <button
                         onClick={() => setViewIntel(true)}
                         className="btn btn-emerald"
+                        style={{ height: 'fit-content' }}
                     >
                         View Intelligence Report
                     </button>
-                    <button
-                        onClick={() => setViewGraph(true)}
-                        className="btn btn-indigo"
-                    >
-                        View Attack Surface Graph
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button
+                            onClick={() => { setIntelFilter('Attack Vector'); setViewIntel(true); }}
+                            className="btn"
+                            style={{ backgroundColor: '#be123c', color: 'white' }}
+                        >
+                            View Attack Paths
+                        </button>
+                        <button
+                            onClick={() => setViewGraph(true)}
+                            className="btn btn-indigo"
+                        >
+                            View Attack Surface Graph
+                        </button>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <button
                             onClick={onReset}

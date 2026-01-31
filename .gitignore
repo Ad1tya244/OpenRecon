@@ -30,6 +30,10 @@ backend/server.log
 verify_*.py
 debug_*.py
 test_*.py
+**/test_*.py
+**/verify_*.py
+**/*_test.py
+backend/verify_*.py
 
 # Editor
 .vscode/

@@ -18,11 +18,10 @@ OpenRecon aggregates intelligence from multiple sources to build a comprehensive
 *   **📂 Public Files**: exposure check for sensitive files like `robots.txt`, `sitemap.xml`, `.enz`, etc.
 *   **⏳ Historical Intel**: specific analysis of past endpoints and tech stacks using Wayback Machine data.
 *   **🧠 Attack Surface Intelligence**: Correlates findings to identify "High Risk" convergences (e.g. Exposed Admin + Open Management Port).
-*   **📊 Interactive Graph Visualization**: Dynamic D3.js force-directed graph with Zoom, Pan, and Trackpad support to visualize complex relationships (Domain -> Subdomain -> IP -> Hosting).
-*   **📄 Consolidated PDF Reporting**: Single-click generation of comprehensive reports including both raw scan data and synthesized intelligence.
-*   **🔎 Deep Network Footprint**: Mapped analysis of Hosting Providers, ASNs, and unprotected cloud instances.
-*   **📜 Code Leak & Historical Intel**: Integration with GitHub and Wayback Machine for secret scanning and legacy endpoint discovery.
-*   **✨ Modern UI**: Sleek, dark-mode dashboard with "Scan New Domain" functionality and responsive design.
+*   **🎯 Attack Path Prioritization**: Simulates attacker decision-making to identify and rank likely attack vectors (e.g. "Credential Harvesting via Leaked .env") based on OSINT confidence.
+*   **� Interactive Graph Visualization**: Dynamic D3.js force-directed graph with Zoom, Pan, Pinch-to-Zoom, and Trackpad support.
+*   **✨ Modern UI**: Sleek, dark-mode dashboard with "View Attack Paths" and "View Graph" focused modes.
+*   **📄 Consolidated PDF Reporting**: Single-click generation of comprehensive detailed reports with strict data parity.
 
 ## 🛠️ Technology Stack
 

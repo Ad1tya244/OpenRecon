@@ -1,5 +1,7 @@
 from typing import Dict, Any, List
 
+from app.modules.attack_path_prioritization import analyze_attack_paths
+
 def generate_intelligence(scan_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Converts raw OSINT reconnaissance data into meaningful, correlated attack-surface intelligence.
@@ -34,6 +36,25 @@ def generate_intelligence(scan_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     if leak_finding:
         findings.append(leak_finding)
         
+    # 5. Attack Path Analysis
+    # Convert detailed attack paths into intelligence findings for the UI
+    attack_paths = analyze_attack_paths(scan_data)
+    for path in attack_paths:
+        # Map Severity: 
+        # Secrets/High impact -> High
+        # Low Effort -> High
+        # Medium Effort -> Medium
+        p_severity = "Medium"
+        if "Secret" in path["title"] or path["effort"] == "Low":
+            p_severity = "High"
+            
+        findings.append({
+            "title": f"Attack Vector: {path['title']}",
+            "description": f"**Simulated Scenario**: An attacker could {path['sequence'][0].lower()} using {path['entry_point']}. \n\n**Effort**: {path['effort']} | **Stealth**: {path['stealth']}",
+            "severity": p_severity,
+            "signals": [f"Step {i+1}: {step}" for i, step in enumerate(path['sequence'])] + [f"Evidence: {path['evidence']}"]
+        })
+    
     return findings
 
 def _detect_admin_exposure(data: Dict[str, Any]) -> Dict[str, Any]:

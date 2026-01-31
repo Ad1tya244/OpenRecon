@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-const IntelligenceReport = ({ domain, initialData, onBack }) => {
+const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
     const [findings, setFindings] = useState(initialData || []);
     const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState(null);
+
+    // Filter findings if a filter is provided
+    const displayFindings = filter
+        ? findings.filter(f => f.title && f.title.includes(filter))
+        : findings;
 
     useEffect(() => {
         console.log("IntelligenceReport Multi-Stage Debug:", { initialData, domain });
@@ -71,7 +76,7 @@ const IntelligenceReport = ({ domain, initialData, onBack }) => {
                         &larr; Back
                     </button>
                     <h1 style={{ margin: 0, fontSize: '1.8rem' }}>
-                        Strategic Intelligence Report: <span className="text-gradient">{domain}</span>
+                        {filter ? "Attack Path Analysis" : "Strategic Intelligence Report"}: <span className="text-gradient">{domain}</span>
                     </h1>
                 </div>
             </div>
@@ -87,17 +92,18 @@ const IntelligenceReport = ({ domain, initialData, onBack }) => {
                     <h3>Error Generating Report</h3>
                     <p>{error}</p>
                 </div>
-            ) : findings.length === 0 ? (
+            ) : displayFindings.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '4rem', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                    <h2>No High-Priority Intelligence Findings</h2>
+                    <h2>{filter ? "No Probable Attack Paths Identified" : "No High-Priority Intelligence Findings"}</h2>
                     <p style={{ color: 'var(--text-dim)' }}>
-                        No correlated exposure patterns (like exposed admin panels or critical leak chains) were detected.
-                        Ensure standard security practices are maintained.
+                        {filter
+                            ? "Based on OSINT inference, no high-confidence attack paths were detected."
+                            : "No correlated exposure patterns (like exposed admin panels or critical leak chains) were detected. Ensure standard security practices are maintained."}
                     </p>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gap: '1.5rem' }}>
-                    {findings.map((finding, index) => (
+                    {displayFindings.map((finding, index) => (
                         <div key={index} style={{
                             background: 'var(--card-bg)',
                             borderRadius: '12px',
@@ -125,7 +131,7 @@ const IntelligenceReport = ({ domain, initialData, onBack }) => {
 
                             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
                                 <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Contributing Signals
+                                    {filter ? "Attack Sequence & Evidence" : "Contributing Signals"}
                                 </h4>
                                 <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)' }}>
                                     {finding.signals && finding.signals.map((signal, idx) => (
