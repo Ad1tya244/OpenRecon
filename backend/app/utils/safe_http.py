@@ -90,8 +90,13 @@ async def safe_request(method: str, url: str, extra_headers: Optional[Dict[str, 
                         scheme = "http"
                     else:
                         scheme = parsed.scheme
+                        
+                    # Handle IPv6 brackets
+                    formatted_ip = target_ip
+                    if ":" in target_ip:
+                        formatted_ip = f"[{target_ip}]"
                     
-                    request_url = f"{scheme}://{target_ip}"
+                    request_url = f"{scheme}://{formatted_ip}"
                     if parsed.port:
                         request_url += f":{parsed.port}"
                     if parsed.path:

@@ -7,8 +7,8 @@ const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
 
     // Filter findings if a filter is provided
     const displayFindings = filter
-        ? findings.filter(f => f.title && f.title.includes(filter))
-        : findings;
+        ? findings.filter(f => f.title && f.title.toLowerCase().includes(filter.toLowerCase()))
+        : findings.filter(f => !f.title || !f.title.toLowerCase().includes('attack vector'));
 
     useEffect(() => {
         console.log("IntelligenceReport Multi-Stage Debug:", { initialData, domain });

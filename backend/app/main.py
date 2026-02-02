@@ -199,6 +199,8 @@ async def _orchestrate_full_scan(domain: str):
     code_leaks_res = await run_module_safely("Code Leaks", code_leak_recon.check_code_leaks, domain)
     historical_res = await run_module_safely("Historical", historical_recon.check_historical_data, domain)
     ports_res = await run_module_safely("Ports", port_recon.scan_ports, domain)
+    ip_res = await run_module_safely("IP Intelligence", ip_hosting_asn_intelligence.get_domain_intelligence, domain)
+    net_res = await run_module_safely("Network Footprint", network_footprint_mapper.map_network_footprint, domain)
 
     full_data = {
         "target": domain,
@@ -213,7 +215,9 @@ async def _orchestrate_full_scan(domain: str):
         "directory_exposure": dir_exp_res,
         "code_leaks": code_leaks_res,
         "historical": historical_res,
-        "ports": ports_res
+        "ports": ports_res,
+        "ip_intelligence": ip_res,
+        "network_footprint": net_res
     }
     
     # Attack Surface Map

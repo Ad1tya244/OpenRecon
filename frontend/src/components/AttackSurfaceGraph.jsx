@@ -249,7 +249,9 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                     </div>
                 </div>
 
-                {/* Controls */}
+
+                {/* Controls - Only show when graph is visible */}
+
                 <div style={{ position: 'absolute', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 10 }}>
                     <button onClick={zoomIn} style={{
                         width: '36px', height: '36px',
@@ -278,7 +280,8 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                     <div style={{
                         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        zIndex: 20
+                        zIndex: 20,
+                        background: 'rgba(17, 17, 17, 0.8)'
                     }}>
                         <h2 style={{ color: '#ccc', fontSize: '1.5rem', fontWeight: '500' }}>Rendering Graph...</h2>
                     </div>

@@ -422,31 +422,44 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
     pdf.chapter_title("12. Historical Intelligence")
     hist = full.get("historical") or {}
     if hist:
+        has_hist_data = False
         stack = hist.get("tech_stack_history") or []
         if stack:
             pdf.add_key_value("Past Tech Stack", ", ".join(mask_sensitive_data(str(x)) for x in stack))
+            has_hist_data = True
         
         old_files = hist.get("interesting_files") or []
         if old_files:
              # Limit to 5 like dashboard
              pdf.add_key_value("Interesting Old Files", ", ".join(old_files[:5]))
+             has_hist_data = True
         
         endpoints = hist.get("historical_endpoints") or []
         if endpoints:
             pdf.add_key_value("Wayback Endpoints", f"{len(endpoints)} unique paths found")
+            has_hist_data = True
+            
+        if not has_hist_data:
+             pdf.chapter_body("No historical data available (Archive returned no significant results).")
     else:
         pdf.chapter_body("No historical data available.")
     pdf.ln(5)
 
-    # 13. Intelligence Analyzer Data
-    pdf.chapter_title("13. Intelligence Analysis")
+    # 13. Intelligence Analyzer Data (General)
+    pdf.chapter_title("13. Strategic Intelligence (General)")
     findings = scan_data.get("intelligence") or []
-    if findings:
-        for finding in findings:
+    
+    # Filter general findings vs attack paths
+    general_findings = [f for f in findings if "Attack Vector:" not in f.get("title", "")]
+    attack_paths = [f for f in findings if "Attack Vector:" in f.get("title", "")]
+    
+    if general_findings:
+        for finding in general_findings:
             title = finding.get("title", "Unknown")
             severity = finding.get("severity", "Unknown")
             
             pdf.set_font('helvetica', 'B', 11)
+            # existing color logic
             if severity == "High": pdf.set_text_color(220, 38, 38)
             elif severity == "Medium": pdf.set_text_color(234, 88, 12)
             else: pdf.set_text_color(0, 100, 200)
@@ -460,11 +473,46 @@ def generate_report(scan_data: Dict[str, Any], output_path: str = "report.pdf") 
             
             signals = finding.get("signals") or []
             if signals:
-                for s in signals:
-                    pdf.add_list_item(str(s))
+                 pdf.ln(2)
+                 for s in signals:
+                     pdf.add_list_item(str(s))
             pdf.ln(3)
     else:
-        pdf.chapter_body("No critical intelligence findings detected.")
+        pdf.chapter_body("No strategic intelligence findings detected.")
+    pdf.ln(5)
+
+    # 14. Attack Path Analysis
+    pdf.chapter_title("14. Attack Path Prioritization")
+    if attack_paths:
+        pdf.chapter_body("Simulated attack vectors based on OSINT inferred converging risks.")
+        pdf.ln(2)
+        
+        for path in attack_paths:
+             # Remove prefix "Attack Vector: " for cleaner PDF title
+             raw_title = path.get("title", "").replace("Attack Vector: ", "")
+             severity = path.get("severity", "Medium")
+             
+             pdf.set_font('helvetica', 'B', 11)
+             if severity == "High": pdf.set_text_color(220, 38, 38) # Red
+             else: pdf.set_text_color(234, 88, 12) # Orange
+             
+             pdf.cell(0, 7, f"Path: {raw_title} [{severity}]", new_x="LMARGIN", new_y="NEXT")
+             pdf.set_text_color(0, 0, 0)
+             
+             desc = path.get("description", "")
+             pdf.set_font('helvetica', '', 10)
+             pdf.multi_cell(0, 5, desc)
+             
+             pdf.ln(2)
+             signals = path.get("signals") or []
+             if signals:
+                 pdf.set_font('helvetica', 'I', 9)
+                 pdf.cell(0, 5, "Execution Sequence & Evidence:", new_x="LMARGIN", new_y="NEXT")
+                 for s in signals:
+                     pdf.add_list_item(str(s))
+             pdf.ln(4)
+    else:
+        pdf.chapter_body("No high-confidence attack paths identified.")
 
     # Save
     try:

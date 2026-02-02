@@ -124,7 +124,7 @@ const Dashboard = ({ domain, onReset }) => {
     if (viewIntel) {
         return <IntelligenceReport
             domain={domain}
-            initialData={data.intelligence}
+            initialData={intelFilter ? null : data.intelligence}
             filter={intelFilter}
             onBack={() => { setViewIntel(false); setIntelFilter(null); }}
         />

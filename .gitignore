@@ -72,3 +72,7 @@ Thumbs.db
 *.sln
 *.sw?
 frontend/logs
+
+# Data
+*.csv
+scans/

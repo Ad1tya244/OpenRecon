@@ -17,11 +17,13 @@ OpenRecon aggregates intelligence from multiple sources to build a comprehensive
 *   **📜 Code Leak Intelligence**: Check for potential secrets or repository leaks on platforms like GitHub.
 *   **📂 Public Files**: exposure check for sensitive files like `robots.txt`, `sitemap.xml`, `.enz`, etc.
 *   **⏳ Historical Intel**: specific analysis of past endpoints and tech stacks using Wayback Machine data.
+*   **📡 IPv6 Support**: Full support for scanning and visualizing IPv6 addresses, ensuring complete coverage of modern infrastructure.
 *   **🧠 Attack Surface Intelligence**: Correlates findings to identify "High Risk" convergences (e.g. Exposed Admin + Open Management Port).
 *   **🎯 Attack Path Prioritization**: Simulates attacker decision-making to identify and rank likely attack vectors (e.g. "Credential Harvesting via Leaked .env") based on OSINT confidence.
-*   **� Interactive Graph Visualization**: Dynamic D3.js force-directed graph with Zoom, Pan, Pinch-to-Zoom, and Trackpad support.
-*   **✨ Modern UI**: Sleek, dark-mode dashboard with "View Attack Paths" and "View Graph" focused modes.
-*   **📄 Consolidated PDF Reporting**: Single-click generation of comprehensive detailed reports with strict data parity.
+*   **📊 Clean Data Separation**: Distinct views for "Strategic Intelligence" (defense focus) and "Attack Path Analysis" (offense focus) to reduce noise.
+*   **🔮 Interactive Graph Visualization**: Dynamic D3.js force-directed graph with Zoom, Pan, Pinch-to-Zoom, and Trackpad support.
+*   **✨ Modern UI**: Sleek, dark-mode dashboard with consistent loading states and "View Attack Paths" focused modes.
+*   **📄 Consolidated PDF Reporting**: Single-click generation of detailed reports, including a dedicated "Attack Path Prioritization" section.
 
 ## 🛠️ Technology Stack
 
@@ -98,5 +100,3 @@ By using this tool, you agree to:
 1.  Only scan domains you own or have explicit permission to audit.
 2.  Not use this tool for malicious purposes or unauthorized entry.
 3.  The developers are not liable for any misuse or legal consequences resulting from the use of this tool.
-
-
