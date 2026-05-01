@@ -5,142 +5,181 @@ const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
     const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState(null);
 
-    // Filter findings if a filter is provided
     const displayFindings = filter
-        ? findings.filter(f => f.title && f.title.toLowerCase().includes(filter.toLowerCase()))
-        : findings.filter(f => !f.title || !f.title.toLowerCase().includes('attack vector'));
+        ? findings.filter(f => f.title?.toLowerCase().includes(filter.toLowerCase()))
+        : findings.filter(f => !f.title?.toLowerCase().includes('attack vector'));
 
     useEffect(() => {
-        console.log("IntelligenceReport Multi-Stage Debug:", { initialData, domain });
-        if (initialData) {
-            console.log("Using initialData:", initialData);
-            setFindings(initialData);
-            setLoading(false);
-            return;
-        }
-
+        if (initialData) { setFindings(initialData); setLoading(false); return; }
         const fetchIntelligence = async () => {
             try {
-                // In a production app, we might pass the full scan data from Dashboard 
-                // to avoid re-fetching, but triggering the specific endpoint ensures 
-                // we run the latest logic.
                 const response = await fetch(`http://localhost:8000/scan/intelligence?domain=${domain}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch intelligence report');
-                }
+                if (!response.ok) throw new Error('Failed to fetch intelligence report');
                 const data = await response.json();
-                console.log("Fetched Data from API:", data);
                 setFindings(data);
             } catch (err) {
-                console.error("Fetch Error:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
-
-        if (domain) {
-            fetchIntelligence();
-        }
+        if (domain) fetchIntelligence();
     }, [domain, initialData]);
 
-    // Helper for severity badges
-    const getSeverityStyle = (severity) => {
+    const getSeverityColor = (severity) => {
         switch (severity?.toLowerCase()) {
-            case 'high': return { backgroundColor: '#ef4444', color: 'white' };
-            case 'medium': return { backgroundColor: '#f97316', color: 'white' };
-            case 'low': return { backgroundColor: '#3b82f6', color: 'white' };
-            default: return { backgroundColor: '#64748b', color: 'white' };
-        }
-    };
-
-    // Helper for confidence badges
-    const getConfidenceStyle = (confidence) => {
-        switch (confidence?.toLowerCase()) {
-            case 'high': return { backgroundColor: '#10b981', color: 'white' }; // Emerald
-            case 'medium': return { backgroundColor: '#f59e0b', color: 'white' }; // Amber
-            case 'low': return { backgroundColor: '#94a3b8', color: 'white' }; // Slate
-            default: return { backgroundColor: '#94a3b8', color: 'white' };
+            case 'high': return { color: 'var(--red)', border: 'var(--red)', bg: 'var(--red-dim)', accent: '#ff003c' };
+            case 'medium': return { color: 'var(--amber)', border: 'var(--amber)', bg: 'rgba(255,183,0,0.1)', accent: '#ffb700' };
+            case 'low': return { color: '#60a5fa', border: '#3b82f6', bg: 'rgba(59,130,246,0.1)', accent: '#3b82f6' };
+            default: return { color: 'var(--text-dim)', border: 'var(--border-color)', bg: 'transparent', accent: '#555' };
         }
     };
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
+        <div style={{ animation: 'fade-in-up 0.4s ease' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+            <div style={{
+                marginBottom: '1.5rem',
+                padding: '1.25rem 1.5rem',
+                background: 'var(--bg-glass)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                backdropFilter: 'blur(10px)',
+                position: 'relative', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                    background: filter
+                        ? 'linear-gradient(90deg, transparent, var(--red), var(--amber), transparent)'
+                        : 'linear-gradient(90deg, transparent, var(--green), var(--cyan), transparent)'
+                }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button
-                        onClick={onBack}
-                        className="btn btn-outline"
-                    >
-                        &larr; Back
-                    </button>
-                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>
-                        {filter ? "Attack Path Analysis" : "Strategic Intelligence Report"}: <span className="text-gradient">{domain}</span>
-                    </h1>
+                    <button onClick={onBack} className="btn btn-outline">← Back</button>
+                    <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
+                            {filter ? 'ATTACK PATH ANALYSIS' : 'STRATEGIC INTELLIGENCE REPORT'}
+                        </div>
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', margin: 0, marginTop: '0.2rem' }}>
+                            <span className={filter ? 'text-red-gradient' : 'text-gradient'}>{domain}</span>
+                        </h1>
+                    </div>
                 </div>
+                {!loading && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                        <span style={{ color: filter ? 'var(--red)' : 'var(--cyan)' }}>{displayFindings.length}</span> findings
+                    </div>
+                )}
             </div>
 
-            {/* Content */}
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-dim)' }}>
-                    <h2>Analyzing Intelligence Signals...</h2>
-                    <p>Correlating recon data across all layers.</p>
+                <div style={{
+                    textAlign: 'center', padding: '5rem 2rem',
+                    background: 'var(--bg-glass)', border: '1px solid var(--border-color)',
+                    borderRadius: '6px', backdropFilter: 'blur(10px)'
+                }}>
+                    <div style={{
+                        width: '40px', height: '40px',
+                        border: '2px solid rgba(0,255,225,0.15)',
+                        borderTopColor: 'var(--cyan)',
+                        borderRadius: '50%',
+                        animation: 'cyber-spin 1s linear infinite',
+                        margin: '0 auto 1.5rem'
+                    }} />
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cyan)', marginBottom: '0.5rem' }}>
+                        ANALYZING SIGNALS
+                    </h2>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                        Correlating recon data across all intelligence layers...
+                    </p>
                 </div>
             ) : error ? (
-                <div style={{ padding: '2rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '12px' }}>
-                    <h3>Error Generating Report</h3>
-                    <p>{error}</p>
+                <div style={{
+                    padding: '2rem', background: 'var(--red-dim)',
+                    border: '1px solid var(--red)', borderRadius: '6px'
+                }}>
+                    <h3 style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)', marginBottom: '0.5rem' }}>
+                        // ERROR: REPORT GENERATION FAILED
+                    </h3>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{error}</p>
                 </div>
             ) : displayFindings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                    <h2>{filter ? "No Probable Attack Paths Identified" : "No High-Priority Intelligence Findings"}</h2>
-                    <p style={{ color: 'var(--text-dim)' }}>
+                <div style={{
+                    textAlign: 'center', padding: '4rem 2rem',
+                    background: 'var(--bg-glass)', border: '1px solid var(--border-color)',
+                    borderRadius: '6px'
+                }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>✓</div>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--green)', marginBottom: '0.5rem' }}>
+                        {filter ? 'NO ATTACK PATHS IDENTIFIED' : 'NO HIGH-PRIORITY FINDINGS'}
+                    </h2>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
                         {filter
-                            ? "Based on OSINT inference, no high-confidence attack paths were detected."
-                            : "No correlated exposure patterns (like exposed admin panels or critical leak chains) were detected. Ensure standard security practices are maintained."}
+                            ? 'No high-confidence attack paths detected via passive OSINT.'
+                            : 'No correlated exposure patterns detected. Maintain standard security practices.'}
                     </p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gap: '1.5rem' }}>
-                    {displayFindings.map((finding, index) => (
-                        <div key={index} style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '12px',
-                            border: '1px solid var(--border)',
-                            padding: '1.5rem',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                            borderLeft: `5px solid ${getSeverityStyle(finding.severity).backgroundColor}`
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                <h3 style={{ margin: 0, fontSize: '1.4rem' }}>{finding.title}</h3>
-                                <span style={{
-                                    padding: '0.25rem 0.75rem',
-                                    borderRadius: '9999px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600',
-                                    ...getSeverityStyle(finding.severity)
-                                }}>
-                                    {finding.severity} Severity
-                                </span>
-                            </div>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                    {displayFindings.map((finding, index) => {
+                        const s = getSeverityColor(finding.severity);
+                        return (
+                            <div key={index} style={{
+                                background: 'var(--bg-glass)',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                borderLeft: `3px solid ${s.accent}`,
+                                padding: '1.25rem 1.5rem',
+                                backdropFilter: 'blur(10px)',
+                                position: 'relative', overflow: 'hidden',
+                                animation: `fade-in-up 0.4s ease ${index * 0.05}s both`
+                            }}>
+                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: `linear-gradient(90deg, ${s.accent}, transparent)` }} />
 
-                            <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                                {finding.description}
-                            </p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', margin: 0, letterSpacing: '0.03em' }}>
+                                        {finding.title}
+                                    </h3>
+                                    <span className={`cyber-tag tag-${finding.severity?.toLowerCase() || 'info'}`}>
+                                        {finding.severity || 'INFO'}
+                                    </span>
+                                </div>
 
-                            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
-                                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    {filter ? "Attack Sequence & Evidence" : "Contributing Signals"}
-                                </h4>
-                                <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-primary)' }}>
-                                    {finding.signals && finding.signals.map((signal, idx) => (
-                                        <li key={idx} style={{ marginBottom: '0.25rem' }}>{signal}</li>
-                                    ))}
-                                </ul>
+                                <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                    {finding.description}
+                                </p>
+
+                                {finding.signals?.length > 0 && (
+                                    <div style={{
+                                        background: 'rgba(0,0,0,0.3)',
+                                        padding: '0.75rem 1rem',
+                                        borderRadius: '4px',
+                                        border: '1px solid rgba(0,255,180,0.08)'
+                                    }}>
+                                        <h4 style={{
+                                            fontFamily: 'var(--font-mono)', fontSize: '0.68rem',
+                                            color: 'var(--text-dim)', textTransform: 'uppercase',
+                                            letterSpacing: '0.12em', marginBottom: '0.5rem'
+                                        }}>
+                                            {filter ? '// ATTACK SEQUENCE & EVIDENCE' : '// CONTRIBUTING SIGNALS'}
+                                        </h4>
+                                        <ul style={{ margin: 0, paddingLeft: '0', listStyle: 'none', display: 'grid', gap: '0.3rem' }}>
+                                            {finding.signals.map((signal, idx) => (
+                                                <li key={idx} style={{
+                                                    fontFamily: 'var(--font-mono)', fontSize: '0.8rem',
+                                                    color: 'var(--text-secondary)',
+                                                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem'
+                                                }}>
+                                                    <span style={{ color: s.color, flexShrink: 0 }}>›</span>
+                                                    {signal}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

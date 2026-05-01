@@ -130,12 +130,23 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
 
     const getNodeColor = (type) => {
         switch (type) {
-            case 'domain': return '#4ade80' // Green
-            case 'subdomain': return '#60a5fa' // Blue
-            case 'ip': return '#f472b6' // Pink
-            case 'technology': return '#fbbf24' // Amber
-            case 'risk': return '#ef4444' // Red
-            default: return '#94a3b8'
+            case 'domain': return '#00ff9d'
+            case 'subdomain': return '#00ffe1'
+            case 'ip': return '#bf80ff'
+            case 'technology': return '#ffb700'
+            case 'risk': return '#ff003c'
+            default: return '#4a6b5f'
+        }
+    }
+
+    const getNodeGlow = (type) => {
+        switch (type) {
+            case 'domain': return 'drop-shadow(0 0 6px #00ff9d)'
+            case 'subdomain': return 'drop-shadow(0 0 4px #00ffe1)'
+            case 'ip': return 'drop-shadow(0 0 4px #bf80ff)'
+            case 'technology': return 'drop-shadow(0 0 4px #ffb700)'
+            case 'risk': return 'drop-shadow(0 0 6px #ff003c)'
+            default: return 'none'
         }
     }
 
@@ -205,16 +216,29 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
     const resetZoom = () => setTransform({ x: 0, y: 0, k: 1 })
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <button onClick={onBack} className="btn btn-outline">
-                    &larr; Back
-                </button>
-                <h3 style={{ fontSize: '1.5rem', margin: 0 }}>Attack Surface Graph</h3>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', animation: 'fade-in-up 0.4s ease' }}>
+            <div style={{
+                marginBottom: '1rem', padding: '1rem 1.25rem',
+                background: 'var(--bg-glass)', border: '1px solid var(--border-color)',
+                borderRadius: '6px', backdropFilter: 'blur(10px)',
+                display: 'flex', alignItems: 'center', gap: '1rem',
+                position: 'relative', overflow: 'hidden'
+            }}>
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                    background: 'linear-gradient(90deg, transparent, var(--purple), var(--cyan), transparent)'
+                }} />
+                <button onClick={onBack} className="btn btn-outline">← Back</button>
+                <div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em' }}>VISUALIZATION</div>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', margin: 0, letterSpacing: '0.05em' }}>
+                        ATTACK SURFACE <span className="text-gradient">GRAPH</span>
+                    </h3>
+                </div>
             </div>
 
             <div
-                style={{ flex: 1, background: '#111', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}
+                style={{ flex: 1, background: 'rgba(2,6,10,0.95)', border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden', position: 'relative', minHeight: '500px' }}
                 ref={svgRef}
                 onWheel={handleWheel}
                 onMouseDown={handleMouseDown}
@@ -223,67 +247,47 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                 onMouseLeave={handleMouseUp}
             >
                 {/* Legend */}
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', background: 'rgba(0,0,0,0.8)', padding: '12px', borderRadius: '8px', border: '1px solid #333', pointerEvents: 'none', zIndex: 10 }}>
-                    <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#eee' }}>Legend</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#4ade80' }}></span>
-                            <span style={{ fontSize: '12px', color: '#ccc' }}>Domain</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#60a5fa' }}></span>
-                            <span style={{ fontSize: '12px', color: '#ccc' }}>Subdomain</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f472b6' }}></span>
-                            <span style={{ fontSize: '12px', color: '#ccc' }}>IP Address</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24' }}></span>
-                            <span style={{ fontSize: '12px', color: '#ccc' }}>Technology</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
-                            <span style={{ fontSize: '12px', color: '#ccc' }}>Risk / Vuln</span>
-                        </div>
+                <div style={{ position: 'absolute', bottom: '20px', left: '20px', background: 'rgba(0,10,8,0.9)', padding: '12px 14px', borderRadius: '4px', border: '1px solid var(--border-color)', pointerEvents: 'none', zIndex: 10, backdropFilter: 'blur(10px)' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NODE TYPES</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {[['#00ff9d','Domain'],['#00ffe1','Subdomain'],['#bf80ff','IP Address'],['#ffb700','Technology'],['#ff003c','Risk/Vuln']].map(([color, label]) => (
+                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}`, flexShrink: 0 }}></span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{label}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
 
                 {/* Controls - Only show when graph is visible */}
 
-                <div style={{ position: 'absolute', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 10 }}>
-                    <button onClick={zoomIn} style={{
-                        width: '36px', height: '36px',
-                        cursor: 'pointer', background: '#222', color: '#fff',
-                        border: '1px solid #444', borderRadius: '8px',
-                        fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                    }} title="Zoom In">+</button>
-                    <button onClick={zoomOut} style={{
-                        width: '36px', height: '36px',
-                        cursor: 'pointer', background: '#222', color: '#fff',
-                        border: '1px solid #444', borderRadius: '8px',
-                        fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                    }} title="Zoom Out">-</button>
-                    <button onClick={resetZoom} style={{
-                        width: '36px', height: '36px',
-                        cursor: 'pointer', background: '#222', color: '#fff',
-                        border: '1px solid #444', borderRadius: '8px',
-                        fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                    }} title="Reset View">R</button>
+                <div style={{ position: 'absolute', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 10 }}>
+                    {[{fn: zoomIn, label: '+', title: 'Zoom In'},{fn: zoomOut, label: '−', title: 'Zoom Out'},{fn: resetZoom, label: '⌂', title: 'Reset'}].map(({fn, label, title}) => (
+                        <button key={title} onClick={fn} title={title} style={{
+                            width: '34px', height: '34px',
+                            cursor: 'pointer',
+                            background: 'rgba(0,10,8,0.9)',
+                            color: 'var(--cyan)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            fontSize: '16px',
+                            fontFamily: 'var(--font-mono)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backdropFilter: 'blur(10px)',
+                            transition: 'all 0.2s'
+                        }}>{label}</button>
+                    ))}
                 </div>
 
                 {loading && (
                     <div style={{
                         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        zIndex: 20,
-                        background: 'rgba(17, 17, 17, 0.8)'
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 20, background: 'rgba(2,4,8,0.85)', backdropFilter: 'blur(4px)'
                     }}>
-                        <h2 style={{ color: '#ccc', fontSize: '1.5rem', fontWeight: '500' }}>Rendering Graph...</h2>
+                        <div style={{ width: '36px', height: '36px', border: '2px solid rgba(0,255,225,0.15)', borderTopColor: 'var(--cyan)', borderRadius: '50%', animation: 'cyber-spin 1s linear infinite', marginBottom: '1rem' }} />
+                        <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--cyan)', fontSize: '1rem', letterSpacing: '0.1em' }}>RENDERING GRAPH...</h2>
                     </div>
                 )}
                 {error && (
@@ -309,7 +313,7 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                     <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.width} ${dimensions.height}`} style={{ cursor: isDragging ? 'grabbing' : 'grab' }}>
                         <defs>
                             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="20" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#555" />
+                                <polygon points="0 0, 10 3.5, 0 7" fill="rgba(0,255,225,0.4)" />
                             </marker>
                         </defs>
 
@@ -324,8 +328,8 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                                         key={i}
                                         x1={source.x} y1={source.y}
                                         x2={target.x} y2={target.y}
-                                        stroke="#555"
-                                        strokeWidth={1 / transform.k} // Keep stroke constant
+                                        stroke="rgba(0,255,180,0.2)"
+                                        strokeWidth={1 / transform.k}
                                         markerEnd="url(#arrowhead)"
                                     />
                                 )
@@ -333,18 +337,21 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
 
                             {/* Nodes */}
                             {nodes.map((node, i) => (
-                                <g key={node.id} transform={`translate(${node.x},${node.y})`}>
+                                <g key={node.id} transform={`translate(${node.x},${node.y})`} style={{ filter: getNodeGlow(node.group) }}>
                                     <circle
-                                        r={(node.group === 'domain' ? 10 : (node.group === 'risk' ? 4 : 6)) / transform.k} // Keep size somewhat constant or zoomable
+                                        r={(node.group === 'domain' ? 10 : (node.group === 'risk' ? 5 : 7)) / transform.k}
                                         fill={getNodeColor(node.group)}
-                                        stroke="#fff"
-                                        strokeWidth={1 / transform.k}
+                                        fillOpacity={0.85}
+                                        stroke={getNodeColor(node.group)}
+                                        strokeWidth={1.5 / transform.k}
+                                        strokeOpacity={0.5}
                                     />
                                     <text
-                                        dy={(node.group === 'domain' ? 25 : 15) / transform.k}
+                                        dy={(node.group === 'domain' ? 26 : 18) / transform.k}
                                         textAnchor="middle"
-                                        fill="#ccc"
-                                        fontSize={`${10 / transform.k}px`} // Scale font invert to zoom
+                                        fill="rgba(224,255,232,0.8)"
+                                        fontSize={`${10 / transform.k}px`}
+                                        fontFamily="Share Tech Mono, monospace"
                                     >
                                         {node.label}
                                     </text>
