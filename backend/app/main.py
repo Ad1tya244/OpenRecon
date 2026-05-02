@@ -1,4 +1,15 @@
+import warnings
+# Suppress 'asyncio.iscoroutinefunction is deprecated' from slowapi/starlette internals.
+# These are upstream bugs — the warning fires from site-packages, not our code.
+# Safe to suppress: the function still works until Python 3.16.
+warnings.filterwarnings(
+    "ignore",
+    message=".*asyncio\\.iscoroutinefunction.*",
+    category=DeprecationWarning,
+)
+
 from datetime import datetime
+
 from fastapi import FastAPI, Request
 from app.modules import dns_recon, whois_recon, ssl_recon, headers_recon, subdomain_recon, tech_fingerprint, security_headers_recon, public_files_recon, directory_exposure_recon, code_leak_recon, historical_recon, attack_surface_mapper, report_generator, port_recon, ip_hosting_asn_intelligence, network_footprint_mapper, unified_attack_surface_graph, attack_surface_intelligence
 from fastapi.responses import JSONResponse
@@ -144,89 +155,85 @@ async def scan_graph(request: Request, domain: str):
     return await unified_attack_surface_graph.build_graph(domain)
 
 import asyncio
+import inspect
 import logging
-
-# Define a module execution helper to ensure safety and timeouts
-# Also handles sync vs async module functions (though most of our network ones are async now or sync-wrapped)
+from functools import partial
 
 logger = logging.getLogger("OpenRecon")
 
 async def run_module_safely(module_name: str, func, *args):
     """
     Executes a module function safely with a timeout.
-    Returns the result or an error dict if it fails.
-    Does not raise exceptions.
+    - Async functions: awaited directly with asyncio.wait_for
+    - Sync functions: run in a thread pool via run_in_executor so they
+      don't block the event loop.
+    Returns the result or an error dict — never raises.
     """
-    timeout = 45 # seconds per module
-    start_time = datetime.now()
-    
+    timeout = 45  # seconds per module
+    loop = asyncio.get_running_loop()
     try:
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             return await asyncio.wait_for(func(*args), timeout=timeout)
         else:
-            # For sync functions (dns, whois, ssl), we run them directly. 
-            # Note: This blocks the event loop for that duration. 
-            # To be truly non-blocking, run_in_executor should be used, 
-            # but given our sequential/simple requirement and low parallelism, 
-            # direct call with try/except is acceptable for "continue safely".
-            # Timeouts for sync functions depend on the module implementation (e.g. socket timeout).
-            return func(*args)
-            
+            # Run blocking/sync functions off the event loop thread
+            return await asyncio.wait_for(
+                loop.run_in_executor(None, partial(func, *args)),
+                timeout=timeout
+            )
     except asyncio.TimeoutError:
-         logger.error(f"Module {module_name} timed out")
-         return {"error": "Module timed out"}
+        logger.error(f"Module {module_name} timed out")
+        return {"error": "Module timed out"}
     except Exception as e:
-         logger.error(f"Module {module_name} failed: {str(e)}")
-         # Return a safe error structure
-         return {"error": f"Module execution failed: {type(e).__name__}"}
+        logger.error(f"Module {module_name} failed: {str(e)}")
+        return {"error": f"Module execution failed: {type(e).__name__}"}
+
+# In-memory intelligence cache: {domain: (timestamp, result)}
+# Avoids re-running _orchestrate_full_scan when /scan/intelligence is called
+# right after the dashboard has already fetched all individual modules.
+_intel_cache: dict = {}
+INTEL_CACHE_TTL = 300   # 5 minutes
+INTEL_CACHE_MAX = 10    # max domains kept
 
 async def _orchestrate_full_scan(domain: str):
     """
-    Private helper to run all scans. Used by /scan/full and /scan/report.
+    Runs all 14 recon modules concurrently via asyncio.gather.
+    Previously sequential — this cuts wall-clock time from sum(timeouts) to max(timeout).
     """
-    # Core Network (Sync)
-    dns_res = await run_module_safely("DNS", dns_recon.get_dns_records, domain)
-    whois_res = await run_module_safely("Whois", whois_recon.get_whois_info, domain)
-    ssl_res = await run_module_safely("SSL", ssl_recon.analyze_ssl, domain)
-    
-    # Async Modules
-    headers_res = await run_module_safely("Headers", headers_recon.analyze_headers, domain)
-    tech_res = await run_module_safely("Tech", tech_fingerprint.get_tech_fingerprint, domain)
-    sec_headers_res = await run_module_safely("Security Headers", security_headers_recon.analyze_security_headers, domain)
-    subdomains_res = await run_module_safely("Subdomains", subdomain_recon.enumerate_subdomains, domain)
-    public_files_res = await run_module_safely("Public Files", public_files_recon.check_public_files, domain)
-    dir_exp_res = await run_module_safely("Directory Exposure", directory_exposure_recon.check_directory_exposure, domain)
-    code_leaks_res = await run_module_safely("Code Leaks", code_leak_recon.check_code_leaks, domain)
-    historical_res = await run_module_safely("Historical", historical_recon.check_historical_data, domain)
-    ports_res = await run_module_safely("Ports", port_recon.scan_ports, domain)
-    ip_res = await run_module_safely("IP Intelligence", ip_hosting_asn_intelligence.get_domain_intelligence, domain)
-    net_res = await run_module_safely("Network Footprint", network_footprint_mapper.map_network_footprint, domain)
+    (
+        dns_res, whois_res, ssl_res, headers_res, tech_res,
+        sec_headers_res, subdomains_res, public_files_res, dir_exp_res,
+        code_leaks_res, historical_res, ports_res, ip_res, net_res
+    ) = await asyncio.gather(
+        run_module_safely("DNS",                dns_recon.get_dns_records,                          domain),
+        run_module_safely("Whois",              whois_recon.get_whois_info,                         domain),
+        run_module_safely("SSL",                ssl_recon.analyze_ssl,                              domain),
+        run_module_safely("Headers",            headers_recon.analyze_headers,                      domain),
+        run_module_safely("Tech",               tech_fingerprint.get_tech_fingerprint,              domain),
+        run_module_safely("Security Headers",   security_headers_recon.analyze_security_headers,    domain),
+        run_module_safely("Subdomains",         subdomain_recon.enumerate_subdomains,               domain),
+        run_module_safely("Public Files",       public_files_recon.check_public_files,              domain),
+        run_module_safely("Directory Exposure", directory_exposure_recon.check_directory_exposure,  domain),
+        run_module_safely("Code Leaks",         code_leak_recon.check_code_leaks,                  domain),
+        run_module_safely("Historical",         historical_recon.check_historical_data,             domain),
+        run_module_safely("Ports",              port_recon.scan_ports,                              domain),
+        run_module_safely("IP Intelligence",    ip_hosting_asn_intelligence.get_domain_intelligence,domain),
+        run_module_safely("Network Footprint",  network_footprint_mapper.map_network_footprint,     domain),
+    )
 
     full_data = {
         "target": domain,
-        "dns": dns_res,
-        "whois": whois_res,
-        "ssl": ssl_res,
-        "headers": headers_res,
-        "tech": tech_res,
-        "security_headers": sec_headers_res,
-        "subdomains": subdomains_res,
-        "public_files": public_files_res,
-        "directory_exposure": dir_exp_res,
-        "code_leaks": code_leaks_res,
-        "historical": historical_res,
-        "ports": ports_res,
-        "ip_intelligence": ip_res,
-        "network_footprint": net_res
+        "dns": dns_res, "whois": whois_res, "ssl": ssl_res,
+        "headers": headers_res, "tech": tech_res,
+        "security_headers": sec_headers_res, "subdomains": subdomains_res,
+        "public_files": public_files_res, "directory_exposure": dir_exp_res,
+        "code_leaks": code_leaks_res, "historical": historical_res,
+        "ports": ports_res, "ip_intelligence": ip_res, "network_footprint": net_res
     }
-    
-    # Attack Surface Map
+
     try:
         full_data["attack_surface"] = attack_surface_mapper.map_attack_surface(full_data)
     except Exception as e:
         full_data["attack_surface"] = {"error": f"Mapping failed: {str(e)}", "risk_assessment": {"score": 0, "grade": "F"}}
-
-
 
     return full_data
 
@@ -250,11 +257,27 @@ async def scan_ports(request: Request, domain: str):
 @app.get("/scan/intelligence")
 @limiter.limit("10/minute")
 async def scan_intelligence(request: Request, domain: str):
+    import time
     domain = get_validated_target(domain)
+
+    # Serve from cache if fresh
+    now = time.monotonic()
+    if domain in _intel_cache:
+        ts, cached = _intel_cache[domain]
+        if now - ts < INTEL_CACHE_TTL:
+            logger.info(f"Intelligence cache hit for {domain}")
+            return cached
+
     full_data = await _orchestrate_full_scan(domain)
-    return attack_surface_intelligence.generate_intelligence(full_data)
+    result = attack_surface_intelligence.generate_intelligence(full_data)
 
+    # Store in cache, evict oldest if over limit
+    _intel_cache[domain] = (now, result)
+    if len(_intel_cache) > INTEL_CACHE_MAX:
+        oldest = min(_intel_cache, key=lambda k: _intel_cache[k][0])
+        del _intel_cache[oldest]
 
+    return result
 
 from fastapi.responses import FileResponse
 import os

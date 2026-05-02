@@ -45,18 +45,22 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
         fetchGraph()
     }, [domain])
 
-    // Simple Force Simulation
+    const [settled, setSettled] = useState(false)
+
+    // Simple Force Simulation — stops automatically when converged
     useEffect(() => {
         if (loading || nodes.length === 0) return
 
         let animationFrameId
+        let frameCount = 0
 
         const simulate = () => {
             const width = dimensions.width
             const height = dimensions.height
-            const k = 40.0 // Repulsion constant
-            const c = 0.05 // Spring constant
+            const k = 40.0        // Repulsion constant
+            const c = 0.05        // Spring constant
             const centerForce = 0.02
+            const CONVERGENCE_THRESHOLD = 0.3
 
             setNodes(prevNodes => {
                 const newNodes = prevNodes.map(n => ({ ...n }))
@@ -71,14 +75,10 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                         const dy = n1.y - n2.y
                         const dist = Math.sqrt(dx * dx + dy * dy) || 1
                         const force = (k * k) / dist
-
                         const fx = (dx / dist) * force
                         const fy = (dy / dist) * force
-
-                        n1.vx += fx
-                        n1.vy += fy
-                        n2.vx -= fx
-                        n2.vy -= fy
+                        n1.vx += fx; n1.vy += fy
+                        n2.vx -= fx; n2.vy -= fy
                     }
                 }
 
@@ -90,43 +90,44 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                         const dx = target.x - source.x
                         const dy = target.y - source.y
                         const dist = Math.sqrt(dx * dx + dy * dy) || 1
-                        const force = (dist - 150) * c // Ideal length 150
-
+                        const force = (dist - 150) * c
                         const fx = (dx / dist) * force
                         const fy = (dy / dist) * force
-
-                        source.vx += fx
-                        source.vy += fy
-                        target.vx -= fx
-                        target.vy -= fy
+                        source.vx += fx; source.vy += fy
+                        target.vx -= fx; target.vy -= fy
                     }
                 })
 
-                // Center Force & Apply Velocity
+                // Center force + damping + apply velocity
+                let maxVelocity = 0
                 newNodes.forEach(n => {
-                    const dx = width / 2 - n.x
-                    const dy = height / 2 - n.y
-                    n.vx += dx * centerForce
-                    n.vy += dy * centerForce
-
-                    // Damping
+                    n.vx += (width / 2 - n.x) * centerForce
+                    n.vy += (height / 2 - n.y) * centerForce
                     n.vx *= 0.9
                     n.vy *= 0.9
-
                     n.x += n.vx
                     n.y += n.vy
+                    const v = Math.sqrt(n.vx * n.vx + n.vy * n.vy)
+                    if (v > maxVelocity) maxVelocity = v
                 })
 
+                // Stop simulation when converged
+                frameCount++
+                if (maxVelocity < CONVERGENCE_THRESHOLD && frameCount > 30) {
+                    cancelAnimationFrame(animationFrameId)
+                    setSettled(true)
+                    return newNodes
+                }
+
+                animationFrameId = requestAnimationFrame(simulate)
                 return newNodes
             })
-
-            animationFrameId = requestAnimationFrame(simulate)
         }
 
-        simulate()
-
+        setSettled(false)
+        animationFrameId = requestAnimationFrame(simulate)
         return () => cancelAnimationFrame(animationFrameId)
-    }, [loading, links, dimensions]) // Only re-run if loading changes or critical data changes
+    }, [loading, links, dimensions])
 
     const getNodeColor = (type) => {
         switch (type) {
@@ -280,6 +281,17 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                     ))}
                 </div>
 
+                {/* Settled indicator */}
+                {settled && !loading && (
+                    <div style={{
+                        position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+                        fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--green)',
+                        background: 'rgba(0,10,8,0.85)', padding: '0.25rem 0.7rem',
+                        borderRadius: '3px', border: '1px solid rgba(0,255,157,0.2)',
+                        pointerEvents: 'none', letterSpacing: '0.1em', zIndex: 10
+                    }}>✓ GRAPH STABILIZED</div>
+                )}
+
                 {loading && (
                     <div style={{
                         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -318,46 +330,54 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                         </defs>
 
                         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
-                            {/* Links */}
-                            {links.map((link, i) => {
-                                const source = nodes.find(n => n.id === link.source)
-                                const target = nodes.find(n => n.id === link.target)
-                                if (!source || !target) return null
+                            {/* Build node map once for O(1) link lookups */}
+                            {(() => {
+                                const nodeMap = new Map(nodes.map(n => [n.id, n]))
                                 return (
-                                    <line
-                                        key={i}
-                                        x1={source.x} y1={source.y}
-                                        x2={target.x} y2={target.y}
-                                        stroke="rgba(0,255,180,0.2)"
-                                        strokeWidth={1 / transform.k}
-                                        markerEnd="url(#arrowhead)"
-                                    />
-                                )
-                            })}
+                                    <>
+                                        {/* Links */}
+                                        {links.map((link, i) => {
+                                            const source = nodeMap.get(link.source)
+                                            const target = nodeMap.get(link.target)
+                                            if (!source || !target) return null
+                                            return (
+                                                <line
+                                                    key={i}
+                                                    x1={source.x} y1={source.y}
+                                                    x2={target.x} y2={target.y}
+                                                    stroke="rgba(0,255,180,0.2)"
+                                                    strokeWidth={1 / transform.k}
+                                                    markerEnd="url(#arrowhead)"
+                                                />
+                                            )
+                                        })}
 
-                            {/* Nodes */}
-                            {nodes.map((node, i) => (
-                                <g key={node.id} transform={`translate(${node.x},${node.y})`} style={{ filter: getNodeGlow(node.group) }}>
-                                    <circle
-                                        r={(node.group === 'domain' ? 10 : (node.group === 'risk' ? 5 : 7)) / transform.k}
-                                        fill={getNodeColor(node.group)}
-                                        fillOpacity={0.85}
-                                        stroke={getNodeColor(node.group)}
-                                        strokeWidth={1.5 / transform.k}
-                                        strokeOpacity={0.5}
-                                    />
-                                    <text
-                                        dy={(node.group === 'domain' ? 26 : 18) / transform.k}
-                                        textAnchor="middle"
-                                        fill="rgba(224,255,232,0.8)"
-                                        fontSize={`${10 / transform.k}px`}
-                                        fontFamily="Share Tech Mono, monospace"
-                                    >
-                                        {node.label}
-                                    </text>
-                                    <title>{JSON.stringify(node.meta, null, 2)}</title>
-                                </g>
-                            ))}
+                                        {/* Nodes */}
+                                        {nodes.map((node) => (
+                                            <g key={node.id} transform={`translate(${node.x},${node.y})`} style={{ filter: getNodeGlow(node.group) }}>
+                                                <circle
+                                                    r={(node.group === 'domain' ? 10 : (node.group === 'risk' ? 5 : 7)) / transform.k}
+                                                    fill={getNodeColor(node.group)}
+                                                    fillOpacity={0.85}
+                                                    stroke={getNodeColor(node.group)}
+                                                    strokeWidth={1.5 / transform.k}
+                                                    strokeOpacity={0.5}
+                                                />
+                                                <text
+                                                    dy={(node.group === 'domain' ? 26 : 18) / transform.k}
+                                                    textAnchor="middle"
+                                                    fill="rgba(224,255,232,0.8)"
+                                                    fontSize={`${10 / transform.k}px`}
+                                                    fontFamily="Share Tech Mono, monospace"
+                                                >
+                                                    {node.label}
+                                                </text>
+                                                <title>{JSON.stringify(node.meta, null, 2)}</title>
+                                            </g>
+                                        ))}
+                                    </>
+                                )
+                            })()}
                         </g>
                     </svg>
                 )}
