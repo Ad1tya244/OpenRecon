@@ -13,7 +13,7 @@ const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
         if (initialData) { setFindings(initialData); setLoading(false); return; }
         const fetchIntelligence = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/scan/intelligence?domain=${domain}`);
+                const response = await fetch(`/scan/intelligence?domain=${domain}`);
                 if (!response.ok) throw new Error('Failed to fetch intelligence report');
                 const data = await response.json();
                 setFindings(data);

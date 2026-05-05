@@ -178,7 +178,7 @@ const Dashboard = ({ domain, onReset, showToast }) => {
     const handleDownloadReport = async () => {
         showToast?.('Generating PDF report...', 'info')
         try {
-            const response = await fetch('http://localhost:8000/scan/report', {
+            const response = await fetch('/scan/report', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...data, target: domain })
@@ -239,7 +239,7 @@ const Dashboard = ({ domain, onReset, showToast }) => {
             return
         }
         try {
-            const response = await fetch(`http://localhost:8000/scan/${endpoint}?domain=${domain}`, { signal })
+            const response = await fetch(`/scan/${endpoint}?domain=${domain}`, { signal })
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
             const result = await response.json()
             cacheRef.current.set(cacheKey, result)

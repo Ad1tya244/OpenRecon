@@ -12,7 +12,7 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
     useEffect(() => {
         const fetchGraph = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/scan/graph?domain=${domain}`)
+                const res = await fetch(`/scan/graph?domain=${domain}`)
                 const data = await res.json()
                 if (!data.nodes) throw new Error("Invalid graph data")
 
