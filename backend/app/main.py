@@ -70,85 +70,85 @@ def get_validated_target(target: str) -> str:
 
 
 
-@app.get("/scan/dns")
+@app.get("/dns")
 @limiter.limit("5/minute")
 async def scan_dns(request: Request, domain: str):
     domain = get_validated_target(domain)
     return dns_recon.get_dns_records(domain)
 
-@app.get("/scan/whois")
+@app.get("/whois")
 @limiter.limit("5/minute")
 async def scan_whois(request: Request, domain: str):
     domain = get_validated_target(domain)
     return whois_recon.get_whois_info(domain)
 
-@app.get("/scan/ssl")
+@app.get("/ssl")
 @limiter.limit("5/minute")
 async def scan_ssl(request: Request, domain: str):
     domain = get_validated_target(domain)
     return ssl_recon.analyze_ssl(domain)
 
-@app.get("/scan/headers")
+@app.get("/headers")
 @limiter.limit("5/minute")
 async def scan_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await headers_recon.analyze_headers(domain)
 
-@app.get("/scan/subdomains")
+@app.get("/subdomains")
 @limiter.limit("5/minute")
 async def scan_subdomains(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await subdomain_recon.enumerate_subdomains(domain)
 
-@app.get("/scan/tech")
+@app.get("/tech")
 @limiter.limit("5/minute")
 async def scan_tech(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await tech_fingerprint.get_tech_fingerprint(domain)
 
-@app.get("/scan/security-headers")
+@app.get("/security-headers")
 @limiter.limit("5/minute")
 async def scan_security_headers(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await security_headers_recon.analyze_security_headers(domain)
 
-@app.get("/scan/public-files")
+@app.get("/public-files")
 @limiter.limit("5/minute")
 async def scan_public_files(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await public_files_recon.check_public_files(domain)
 
-@app.get("/scan/directory-exposure")
+@app.get("/directory-exposure")
 @limiter.limit("5/minute")
 async def scan_directory_exposure(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await directory_exposure_recon.check_directory_exposure(domain)
 
-@app.get("/scan/code-leaks")
+@app.get("/code-leaks")
 @limiter.limit("5/minute")
 async def scan_code_leaks(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await code_leak_recon.check_code_leaks(domain)
 
-@app.get("/scan/historical")
+@app.get("/historical")
 @limiter.limit("5/minute")
 async def scan_historical(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await historical_recon.check_historical_data(domain)
 
-@app.get("/scan/ip-intelligence")
+@app.get("/ip-intelligence")
 @limiter.limit("5/minute")
 async def scan_ip_intelligence(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await ip_hosting_asn_intelligence.get_domain_intelligence(domain)
 
-@app.get("/scan/network-footprint")
+@app.get("/network-footprint")
 @limiter.limit("5/minute")
 async def scan_network_footprint(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await network_footprint_mapper.map_network_footprint(domain)
 
-@app.get("/scan/graph")
+@app.get("/graph")
 @limiter.limit("3/minute")
 async def scan_graph(request: Request, domain: str):
     domain = get_validated_target(domain)
@@ -237,7 +237,7 @@ async def _orchestrate_full_scan(domain: str):
 
     return full_data
 
-@app.get("/scan/full")
+@app.get("/full")
 @limiter.limit("2/minute")
 async def scan_full(request: Request, domain: str):
     domain = get_validated_target(domain)
@@ -248,13 +248,13 @@ async def scan_full(request: Request, domain: str):
         "full_results": full_data
     }
 
-@app.get("/scan/ports")
+@app.get("/ports")
 @limiter.limit("2/minute")
 async def scan_ports(request: Request, domain: str):
     domain = get_validated_target(domain)
     return await port_recon.scan_ports(domain)
 
-@app.get("/scan/intelligence")
+@app.get("/intelligence")
 @limiter.limit("10/minute")
 async def scan_intelligence(request: Request, domain: str):
     import time
@@ -283,7 +283,7 @@ from fastapi.responses import FileResponse
 import os
 import tempfile
 
-@app.post("/scan/report")
+@app.post("/report")
 @limiter.limit("5/minute")
 async def generate_consolidated_report(request: Request, data: dict):
     target = data.get("target", "Target")
