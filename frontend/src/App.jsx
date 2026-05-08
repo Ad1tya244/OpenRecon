@@ -3,6 +3,7 @@ import './index.css'
 import SearchBar from './components/SearchBar'
 import Dashboard from './components/Dashboard'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { Analytics } from '@vercel/analytics/react'
 
 // --- Memoized Matrix Rain (generated once, never re-renders) ---
 const COLUMNS = Array.from({ length: 18 }, (_, i) => {
@@ -291,6 +292,9 @@ function App() {
 
       {/* Vercel Speed Insights */}
       <SpeedInsights />
+      
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   )
 }
