@@ -218,6 +218,13 @@ const Dashboard = ({ domain, onReset, showToast }) => {
 
     const riskSummary = useRiskSummary(data, loading)
 
+    const allLoaded = Object.values(loading).every(v => !v);
+    useEffect(() => {
+        if (allLoaded) {
+            showToast?.('Scan complete', 'success');
+        }
+    }, [allLoaded, showToast]);
+
     // Session-level cache so the same domain isn't re-fetched on re-render
     const cacheRef = React.useRef(new Map())
     const [retries, setRetries] = React.useState({})
