@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "concurrently --kill-others \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && venv/bin/uvicorn app.main:app --reload --port 8000",
-    "dev:frontend": "cd frontend && npm run dev"
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build"
   },
   "keywords": [],
   "author": "",

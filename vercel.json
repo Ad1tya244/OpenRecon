@@ -1,12 +1,18 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "entrypoint": "frontend",
-      "routePrefix": "/"
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/scan/(.*)",
+      "destination": "/api/index.py"
     },
-    "backend": {
-      "entrypoint": "backend/app/main.py",
-      "routePrefix": "/scan"
+    {
+      "source": "/scan",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  }
+  ]
 }
