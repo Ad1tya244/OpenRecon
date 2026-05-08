@@ -94,6 +94,7 @@ npm run dev
 To stop the servers, simply press:
 **`Ctrl + C`** in the terminal where the program is running.
 
+
 ## 🛑 Disclaimer
 **OpenRecon is intended for educational and defensive purposes only.**
 By using this tool, you agree to:
