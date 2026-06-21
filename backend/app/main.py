@@ -8,6 +8,9 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+from app.utils.dotenv import load_dotenv
+load_dotenv()
+
 from datetime import datetime
 
 from fastapi import FastAPI, Request
