@@ -38,15 +38,14 @@ const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
     return (
         <div style={{ animation: 'fade-in-up 0.4s ease' }}>
             {/* Header */}
-            <div style={{
+            <div className="dashboard-header-container" style={{
                 marginBottom: '1.5rem',
                 padding: '1.25rem 1.5rem',
                 background: 'var(--bg-glass)',
                 border: '1px solid var(--border-color)',
                 borderRadius: '6px',
                 backdropFilter: 'blur(10px)',
-                position: 'relative', overflow: 'hidden',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                position: 'relative', overflow: 'hidden'
             }}>
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
@@ -54,7 +53,7 @@ const IntelligenceReport = ({ domain, initialData, onBack, filter }) => {
                         ? 'linear-gradient(90deg, transparent, var(--red), var(--amber), transparent)'
                         : 'linear-gradient(90deg, transparent, var(--green), var(--cyan), transparent)'
                 }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     <button onClick={onBack} className="btn btn-outline">← Back</button>
                     <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em' }}>

@@ -121,15 +121,13 @@ const RiskSummary = ({ summary, domain }) => {
     const scoreColor = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
     const scoreLabel = score >= 80 ? 'LOW RISK' : score >= 50 ? 'MEDIUM RISK' : 'HIGH RISK'
     return (
-        <div style={{
+        <div className="risk-summary-row" style={{
             marginBottom: '1.5rem',
             padding: '1rem 1.25rem',
             background: 'var(--bg-glass)',
             border: `1px solid ${scoreColor}33`,
             borderRadius: '4px',
             backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', gap: '1.5rem',
-            flexWrap: 'wrap',
             animation: 'fade-in-up 0.5s ease'
         }}>
             {/* Score */}
@@ -149,7 +147,7 @@ const RiskSummary = ({ summary, domain }) => {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.58rem', color: scoreColor, marginTop: '0.35rem', letterSpacing: '0.1em' }}>{scoreLabel}</span>
             </div>
             {/* Divider */}
-            <div style={{ width: '1px', height: '48px', background: 'var(--border-color)', flexShrink: 0 }} />
+            <div className="risk-summary-divider" />
             {/* Flags */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', flex: 1 }}>
                 {items.map((item, i) => {
@@ -317,7 +315,7 @@ const Dashboard = ({ domain, onReset, showToast }) => {
                     background: 'linear-gradient(90deg, transparent, var(--cyan), var(--green), transparent)'
                 }} />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div className="dashboard-header-container">
                     <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: '0.3rem' }}>
                             ACTIVE TARGET
@@ -333,7 +331,7 @@ const Dashboard = ({ domain, onReset, showToast }) => {
                         </p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <div className="btn-group" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
                         <button onClick={() => setViewIntel(true)} className="btn btn-emerald">
                             ◈ Intel Report
                         </button>
@@ -360,7 +358,7 @@ const Dashboard = ({ domain, onReset, showToast }) => {
             <RiskSummary summary={riskSummary} domain={domain} />
 
             {/* Cards grid */}
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', alignItems: 'start' }}>
                 <ReportCard
                     title="DNS Records" icon={CARD_ICONS.dns}
                     loading={loading.dns}

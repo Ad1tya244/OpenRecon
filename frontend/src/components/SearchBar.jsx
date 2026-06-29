@@ -267,7 +267,7 @@ const SearchBar = ({ onSearch, loading, showToast }) => {
                 </form>
 
                 {/* Keyboard hint */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                <div className="search-bar-footer">
                     <div style={{
                         padding: '0.5rem 0.75rem',
                         background: 'rgba(255,183,0,0.05)',

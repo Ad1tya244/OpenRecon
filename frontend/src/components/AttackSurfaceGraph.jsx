@@ -129,6 +129,20 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
         return () => cancelAnimationFrame(animationFrameId)
     }, [loading, links, dimensions])
 
+    useEffect(() => {
+        if (loading) return
+        const handleResize = () => {
+            const clientWidth = svgRef.current ? svgRef.current.clientWidth : 0
+            const clientHeight = svgRef.current ? svgRef.current.clientHeight : 0
+            setDimensions({
+                width: clientWidth || 800,
+                height: clientHeight || 600
+            })
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [loading])
+
     const getNodeColor = (type) => {
         switch (type) {
             case 'domain': return '#00ff9d'
@@ -218,23 +232,24 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', animation: 'fade-in-up 0.4s ease' }}>
-            <div style={{
+            <div className="dashboard-header-container" style={{
                 marginBottom: '1rem', padding: '1rem 1.25rem',
                 background: 'var(--bg-glass)', border: '1px solid var(--border-color)',
                 borderRadius: '6px', backdropFilter: 'blur(10px)',
-                display: 'flex', alignItems: 'center', gap: '1rem',
                 position: 'relative', overflow: 'hidden'
             }}>
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
                     background: 'linear-gradient(90deg, transparent, var(--purple), var(--cyan), transparent)'
                 }} />
-                <button onClick={onBack} className="btn btn-outline">← Back</button>
-                <div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em' }}>VISUALIZATION</div>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', margin: 0, letterSpacing: '0.05em' }}>
-                        ATTACK SURFACE <span className="text-gradient">GRAPH</span>
-                    </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button onClick={onBack} className="btn btn-outline">← Back</button>
+                    <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.15em' }}>VISUALIZATION</div>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', margin: 0, letterSpacing: '0.05em' }}>
+                            ATTACK SURFACE <span className="text-gradient">GRAPH</span>
+                        </h3>
+                    </div>
                 </div>
             </div>
 
@@ -248,7 +263,7 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
                 onMouseLeave={handleMouseUp}
             >
                 {/* Legend */}
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', background: 'rgba(0,10,8,0.9)', padding: '12px 14px', borderRadius: '4px', border: '1px solid var(--border-color)', pointerEvents: 'none', zIndex: 10, backdropFilter: 'blur(10px)' }}>
+                <div className="graph-legend">
                     <h4 style={{ margin: '0 0 8px 0', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>NODE TYPES</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {[['#00ff9d','Domain'],['#00ffe1','Subdomain'],['#bf80ff','IP Address'],['#ffb700','Technology'],['#ff003c','Risk/Vuln']].map(([color, label]) => (
@@ -263,7 +278,7 @@ const AttackSurfaceGraph = ({ domain, onBack }) => {
 
                 {/* Controls - Only show when graph is visible */}
 
-                <div style={{ position: 'absolute', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 10 }}>
+                <div className="graph-controls">
                     {[{fn: zoomIn, label: '+', title: 'Zoom In'},{fn: zoomOut, label: '−', title: 'Zoom Out'},{fn: resetZoom, label: '⌂', title: 'Reset'}].map(({fn, label, title}) => (
                         <button key={title} onClick={fn} title={title} style={{
                             width: '34px', height: '34px',

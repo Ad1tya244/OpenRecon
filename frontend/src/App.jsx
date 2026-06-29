@@ -153,13 +153,8 @@ function App() {
         boxShadow: '0 1px 0 var(--border-color), 0 4px 24px rgba(0, 255, 180, 0.04)'
       }}>
         {/* Top ticker bar */}
-        <div style={{
-          background: 'rgba(0, 255, 180, 0.04)',
-          borderBottom: '1px solid var(--border-color)',
-          padding: '0.28rem 1.5rem',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', gap: '2rem', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+        <div className="header-ticker">
+          <div className="header-ticker-left">
             {STATUS_ITEMS.map(s => (
               <span key={s.label}>
                 <span style={{ color: 'var(--text-dim)' }}>{s.label}:</span>
@@ -173,17 +168,14 @@ function App() {
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '1.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+          <div className="header-ticker-right">
             <span style={{ color: 'var(--text-dim)' }}>{dateStr}</span>
             <span style={{ color: 'var(--cyan)', letterSpacing: '0.05em' }}>{timeStr}</span>
           </div>
         </div>
 
         {/* Logo + nav */}
-        <div className="container" style={{
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', padding: '0.85rem 1.5rem'
-        }}>
+        <div className="container header-main">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
             {/* Icon */}
             <div style={{
@@ -219,7 +211,7 @@ function App() {
           </div>
 
           {/* Right side */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div className="header-main-right">
             {target && (
               <div style={{
                 fontFamily: 'var(--font-mono)', fontSize: '0.78rem',
